@@ -1,0 +1,24 @@
+# Secrets and local config
+.env
+.env.local
+.env.*
+*.key
+secrets.json
+
+# Large local assets (add textbook PDF locally)
+*.pdf
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*~
+
+# Logs
+*.log
+npm-debug.log*

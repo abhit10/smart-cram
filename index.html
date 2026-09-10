@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Cram - Study Platform</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand" onclick="navigateHome()">
+                <div class="brand-icon">
+                    <i class="fas fa-graduation-cap"></i>
+                </div>
+                <span class="brand-text">Smart Cram</span>
+            </div>
+
+            <div class="nav-menu">
+                <!-- Subjects Dropdown -->
+                <div class="dropdown">
+                    <button class="nav-btn" onclick="toggleDropdown('subjects')">
+                        <i class="fas fa-book"></i>
+                        <span>Subjects</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <div class="dropdown-content" id="subjects-dropdown">
+                        <!-- Subjects will be populated dynamically -->
+                    </div>
+                </div>
+
+                <!-- Question Papers Dropdown -->
+                <div class="dropdown">
+                    <button class="nav-btn" id="papers-btn" onclick="toggleDropdown('papers')" disabled>
+                        <i class="fas fa-file-text"></i>
+                        <span>Question Papers</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <div class="dropdown-content" id="papers-dropdown">
+                        <!-- Papers will be populated dynamically -->
+                    </div>
+                </div>
+
+                <!-- Cheatsheets Dropdown -->
+                <div class="dropdown">
+                    <button class="nav-btn" onclick="toggleDropdown('cheatsheets')">
+                        <i class="fas fa-sticky-note"></i>
+                        <span>Cheatsheets</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <div class="dropdown-content" id="cheatsheets-dropdown">
+                        <div class="dropdown-item" onclick="createNewCheatsheet()">
+                            <i class="fas fa-plus"></i>
+                            <span>Create New Cheatsheet</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Flashcards -->
+                <button class="nav-btn" onclick="showFlashcards()">
+                    <i class="fas fa-layer-group"></i>
+                    <span>Flashcards</span>
+                </button>
+
+                <button class="nav-btn" onclick="showVideoSearchModal()">
+                    <i class="fas fa-video"></i>
+                    <span>Videos</span>
+                </button>
+
+                <!-- Profile Dropdown -->
+                <div class="dropdown">
+                    <button class="nav-btn" onclick="toggleDropdown('profile')">
+                        <div class="profile-avatar">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <div class="dropdown-content profile-dropdown" id="profile-dropdown">
+                        <div class="profile-info">
+                            <p class="profile-name">Alex Johnson</p>
+                            <p class="profile-email">alex.johnson@student.edu</p>
+                        </div>
+                        <div class="dropdown-separator"></div>
+                        <div class="dropdown-item logout-item" onclick="logout()">
+                            <i class="fas fa-sign-out-alt"></i>
+                            <span>Logout</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AI Assistant -->
+                <button class="ai-btn" onclick="toggleChat()">
+                    <i class="fas fa-robot"></i>
+                    AI Assistant
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Hero Section -->
+        <div id="hero-section" class="hero-section">
+            <div class="hero-content">
+                <h1 class="hero-title">
+                    <span class="title-smart">SMART</span>
+                    <span class="title-cram">CRAM</span>
+                </h1>
+                <p class="hero-subtitle">Revolutionize Your Study Experience</p>
+            </div>
+
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <h3>AI-Powered Learning</h3>
+                    <p>Intelligent study assistance</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <h3>Progress Tracking</h3>
+                    <p>Monitor your improvement</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <h3>Collaborative Study</h3>
+                    <p>Learn together with peers</p>
+                </div>
+            </div>
+
+            <div class="info-banner">
+                <div class="info-icon">✓</div>
+                <p>Select History from the navbar to get started</p>
+            </div>
+        </div>
+
+        <!-- Study View -->
+        <div id="study-section" class="study-section hidden">
+            <div class="study-header">
+                <button class="back-btn" onclick="backToHome()">
+                    <i class="fas fa-arrow-left"></i>
+                    <span>Back to Home</span>
+                </button>
+                <h2 id="study-title">Study View</h2>
+            </div>
+
+            <div class="study-panels">
+                <!-- Questions Panel -->
+                <div id="questions-panel" class="questions-panel hidden">
+                    <div class="panel-header">
+                        <h3 id="questions-title">Questions</h3>
+                    </div>
+                    <div class="questions-content" id="questions-content">
+                        <!-- Questions will be populated here -->
+                    </div>
+                </div>
+
+                <!-- PDF Panel -->
+                <div id="pdf-panel" class="pdf-panel">
+                    <div class="panel-header">
+                        <h3 id="pdf-title">Textbook</h3>
+                    </div>
+                    <div class="pdf-content">
+                        <div id="pdf-viewer" class="pdf-viewer">
+                            <div class="pdf-placeholder">
+                                <i class="fas fa-book"></i>
+                                <h4>PDF Viewer</h4>
+                                <p>Select a subject to view textbook</p>
+                                <p class="pdf-note">PDF will load here when you select a subject</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Flashcards Section -->
+        <div id="flashcards-section" class="flashcards-section hidden">
+            <div class="flashcards-header">
+                <button class="back-btn" onclick="backToHome()">
+                    <i class="fas fa-arrow-left"></i>
+                    <span>Back to Home</span>
+                </button>
+                <h2 id="flashcards-title">Select a Subject for Flashcards</h2>
+            </div>
+
+            <div id="flashcard-content" class="flashcard-content">
+                <div class="no-subject">
+                    <div class="no-subject-icon">
+                        <i class="fas fa-layer-group"></i>
+                    </div>
+                    <h3>No Subject Selected</h3>
+                    <p>Please select a subject from the navigation to view flashcards.</p>
+                </div>
+            </div>
+
+            <div id="flashcard-viewer" class="flashcard-viewer hidden">
+                <div class="flashcard-counter">
+                    <span id="card-counter">1 of 3</span>
+                </div>
+
+                <div class="flashcard" id="flashcard" onclick="flipCard()">
+                    <div class="flashcard-inner">
+                        <div class="flashcard-front">
+                            <h4>Question</h4>
+                            <p id="question-text">Click to reveal answer</p>
+                            <small>Click to reveal answer</small>
+                        </div>
+                        <div class="flashcard-back">
+                            <h4>Answer</h4>
+                            <p id="answer-text">Answer will appear here</p>
+                            <small>Click to see question</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flashcard-controls">
+                    <button class="control-btn" onclick="previousCard()">
+                        <i class="fas fa-arrow-left"></i>
+                        Previous
+                    </button>
+                    <button class="flip-btn" onclick="flipCard()">
+                        <span id="flip-text">Show Answer</span>
+                    </button>
+                    <button class="control-btn" onclick="nextCard()">
+                        Next
+                        <i class="fas fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cheatsheet Viewer Section -->
+        <div id="cheatsheet-viewer-section" class="cheatsheet-viewer-section hidden">
+            <div class="cheatsheet-viewer-header">
+                <button class="back-btn" onclick="backToHome()">
+                    <i class="fas fa-arrow-left"></i>
+                    <span>Back to Home</span>
+                </button>
+                <h2 id="cheatsheet-viewer-title">
+                    <i class="fas fa-sticky-note"></i>
+                    <span>Cheatsheet Name</span>
+                </h2>
+                <div class="cheatsheet-actions">
+                    <button class="generate-flashcards-btn" onclick="generateFlashcardsFromCheatsheet()">
+                        <i class="fas fa-play"></i>
+                        AI Generate Flashcards
+                    </button>
+                    <div class="export-options">
+                        <button class="export-btn-doc" onclick="exportCheatsheetAsDocx()">
+                            <i class="fas fa-file-word"></i> &nbsp;Export as Word (.docx)
+                        </button>
+                        <button class="export-btn-pdf" onclick="exportCheatsheetAsPDF()">
+                            <i class="fas fa-file-pdf"></i> &nbsp;Export as PDF (.pdf)
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="cheatsheet-items-container" class="cheatsheet-items-container">
+                <!-- Cheatsheet items will be populated here -->
+            </div>
+        </div>
+        <div id="videos-section" class="videos-section hidden">
+            <div class="videos-header">
+                <button class="back-btn" onclick="backToHome()">
+                    <i class="fas fa-arrow-left"></i>
+                    <span>Back to Home</span>
+                </button>
+                <h2 id="videos-title">Videos</h2>
+                <button class="search-again-btn" onclick="showVideoSearchModal()">
+                    <i class="fas fa-search"></i>
+                    Search Again
+                </button>
+            </div>
+        
+            <div id="videos-list" class="videos-list">
+                <!-- Videos will be populated here -->
+            </div>
+        </div>
+    </main>
+
+    <!-- AI Chat Panel -->
+    <div id="chat-panel" class="chat-panel hidden">
+        <div class="chat-header">
+            <div class="chat-title">
+                <i class="fas fa-robot"></i>
+                <h3>AI Study Assistant</h3>
+            </div>
+            <div class="chat-actions">
+                <button class="clear-chat" onclick="clearChat()">
+                    <i class="fas fa-trash"></i>
+                </button>
+                <button class="close-chat" onclick="toggleChat()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="chat-messages" id="chat-messages">
+            <div class="message bot-message">
+                <p>Hello! I'm your AI study assistant. How can I help you today?</p>
+            </div>
+        </div>
+        <div class="chat-input">
+            <input type="text" id="chat-input" placeholder="Ask me anything about your studies..." onkeypress="handleChatKeypress(event)">
+            <button onclick="sendMessage()">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Cheatsheet Modal -->
+    <div id="cheatsheet-modal" class="modal hidden">
+        <div class="modal-content">
+            <h3>Create New Cheatsheet</h3>
+            <input type="text" id="cheatsheet-name" placeholder="Enter cheatsheet name..." onkeypress="handleCheatsheetKeypress(event)">
+            <div class="modal-actions">
+                <button class="cancel-btn" onclick="closeCheatsheetModal()">Cancel</button>
+                <button class="create-btn" onclick="createCheatsheet()">Create</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Text Selection Popup -->
+    <div id="selection-popup" class="selection-popup hidden">
+        <button class="selection-btn" onclick="addToCheatsheet()">
+            <i class="fas fa-plus"></i>
+            Add to Cheatsheet
+        </button>
+    </div>
+
+    <!-- Cheatsheet Selection Modal -->
+    <div id="cheatsheet-select-modal" class="modal hidden">
+        <div class="modal-content">
+            <h3>Add to Cheatsheet</h3>
+            <div class="selected-text-preview" id="selected-text-preview"></div>
+            <div id="cheatsheet-list" class="cheatsheet-list">
+                <!-- Cheatsheet options will be populated here -->
+            </div>
+            <div class="modal-actions">
+                <button class="cancel-btn" onclick="closeCheatsheetSelectModal()">Cancel</button>
+                <button class="create-btn" onclick="createNewCheatsheetFromSelection()">
+                    <i class="fas fa-plus"></i>
+                    Create New
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Flashcard Generation Modal -->
+    <div id="flashcard-generation-modal" class="modal hidden">
+        <div class="modal-content flashcard-gen-content">
+            <h3>AI-Powered Flashcard Generation</h3>
+            <p class="modal-subtitle">Let AI create intelligent question-answer pairs from your notes</p>
+            
+            <div class="ai-info-box">
+                <i class="fas fa-info-circle"></i>
+                <p>Using AI to analyze your content and generate smart flashcards...</p>
+            </div>
+
+            <div class="modal-actions">
+                <button class="cancel-btn" onclick="closeFlashcardGenerationModal()">Cancel</button>
+                <button class="create-btn" onclick="confirmAIFlashcardGeneration()">
+                    <i class="fas fa-magic"></i>
+                    Generate with AI
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PDF Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- DOCX Export -->
+    <script src="https://cdn.jsdelivr.net/npm/docx@8.3.0/build/index.umd.js"></script>
+    <!-- Main App Script -->
+    <script src="script.js"></script>
+    <div id="video-search-modal" class="modal hidden">
+        <div class="modal-content">
+            <h3>Search Educational Videos</h3>
+            <p class="modal-subtitle">Enter a topic to find the best educational videos on YouTube</p>
+            <input 
+                type="text" 
+                id="video-topic-input" 
+                placeholder="e.g., French Revolution, Photosynthesis, Algebra..." 
+                onkeypress="handleVideoSearchKeypress(event)"
+            >
+            <div class="modal-actions">
+                <button class="cancel-btn" onclick="closeVideoSearchModal()">Cancel</button>
+                <button class="create-btn" onclick="searchVideos()">
+                    <i class="fas fa-search"></i>
+                    Search Videos
+                </button>
+            </div>
+        </div>
+    </div>
+    <div id="video-player-modal" class="modal hidden" onclick="if(event.target === this) closeVideoPlayer()">
+        <div class="modal-content video-player-content">
+            <button class="close-video-btn" onclick="closeVideoPlayer()">
+                <i class="fas fa-times"></i>
+            </button>
+            <div class="video-player-container">
+                <iframe 
+                    id="video-player-iframe"
+                    width="100%" 
+                    height="100%" 
+                    frameborder="0" 
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                    allowfullscreen>
+                </iframe>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
