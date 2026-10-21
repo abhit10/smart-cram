@@ -4,17 +4,21 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createApp } from '../server.js';
+import { createServer } from 'node:http';
 
 async function start(options = {}) {
-  const app = createApp({ databasePath: ':memory:', ...options });
+  const app = createApp({ databasePath: ':memory:', geminiKey: '', youtubeKey: '', ...options });
   await new Promise(resolve => app.listen(0, '127.0.0.1', resolve));
   const base = `http://127.0.0.1:${app.address().port}`;
   async function request(path, { method = 'GET', body, cookie, headers = {} } = {}) {
     const response = await fetch(base + path, { method,
       headers: { 'Content-Type': 'application/json', ...(cookie ? { Cookie: cookie } : {}), ...headers },
       ...(body !== undefined ? { body: JSON.stringify(body) } : {}) });
+    const text = await response.text();
+    let parsed = null;
+    try { parsed = JSON.parse(text); } catch {}
     return { status: response.status, cookie: response.headers.get('set-cookie')?.split(';')[0],
-      headers: response.headers, body: await response.json().catch(() => null) };
+      headers: response.headers, body: parsed, text };
   }
   const close = () => new Promise(resolve => { app.close(resolve); app.closeAllConnections(); });
   return { app, request, close };
@@ -103,4 +107,109 @@ test('provider failures do not expose secrets', async t => {
   const { cookie } = await request('/api/auth/register', { method: 'POST', body: credentials });
   const result = await request('/api/chat', { method: 'POST', cookie, body: { message: 'Hello' } });
   assert.equal(result.status, 502); assert.match(result.body.error, /server API key/); assert.ok(!result.body.error.includes('secret'));
+});
+
+const providerRoutes = [
+  { path: '/api/chat', method: 'POST', body: { message: 'Explain nationalism' }, keyName: 'GEMINI_API_KEY' },
+  { path: '/api/flashcards/generate', method: 'POST', body: { content: 'History study notes' }, keyName: 'GEMINI_API_KEY' },
+  { path: '/api/youtube/search?q=history', method: 'GET', keyName: 'YOUTUBE_API_KEY' }
+];
+const testKeys = { geminiKey: 'fake-gemini-private-value', youtubeKey: 'fake-youtube-private-value' };
+
+test('public assets contain no provider configuration or server key values', async t => {
+  const { request, close } = await start(testKeys); t.after(close);
+  for (const path of ['/', '/index.html', '/script.js', '/account.js', '/styles.css', '/2023-24_history.json', '/2024-25_history.json']) {
+    const result = await request(path);
+    assert.equal(result.status, 200, path);
+    for (const key of Object.values(testKeys)) assert.ok(!result.text.includes(key), path);
+    assert.doesNotMatch(result.text, /(?:GEMINI|YOUTUBE|OPENAI|CLAUDE)_API_KEY|generativelanguage\.googleapis\.com|googleapis\.com\/youtube\/v3/, path);
+  }
+  for (const path of ['/.env', '/.env.local', '/.env.production', '/.env.example', '/server.js', '/.git/config', '/data/smart-cram.sqlite']) {
+    for (const method of ['GET', 'HEAD']) assert.equal((await request(path, { method })).status, 404, `${method} ${path}`);
+  }
+});
+
+test('all provider routes reject unauthenticated requests before calling providers', async t => {
+  let calls = 0;
+  const { request, close } = await start({ ...testKeys, fetchImpl: async () => { calls++; throw new Error('Unexpected provider call'); } });
+  t.after(close);
+  for (const route of providerRoutes) {
+    const result = await request(route.path, route);
+    assert.equal(result.status, 401, route.path);
+    assert.match(result.body.error, /sign in/i);
+  }
+  assert.equal(calls, 0);
+});
+
+test('all provider routes explain missing server keys without contacting providers', async t => {
+  let calls = 0;
+  const { request, close } = await start({ fetchImpl: async () => { calls++; throw new Error('Unexpected provider call'); } });
+  t.after(close);
+  const { cookie } = await request('/api/auth/register', { method: 'POST', body: credentials });
+  for (const route of providerRoutes) {
+    const result = await request(route.path, { ...route, cookie });
+    assert.equal(result.status, 503, route.path);
+    assert.ok(result.body.error.includes(route.keyName));
+    assert.match(result.body.error, /on the server/);
+  }
+  assert.equal(calls, 0);
+});
+
+test('provider authentication and quota errors stay readable without leaking upstream errors', async t => {
+  let status = 403;
+  let bodyReads = 0;
+  const { request, close } = await start({ ...testKeys, fetchImpl: async () => ({
+    ok: false, status, json: async () => { bodyReads++; return { error: `Credential: ${testKeys.geminiKey} ${testKeys.youtubeKey}` }; }
+  }) }); t.after(close);
+  const { cookie } = await request('/api/auth/register', { method: 'POST', body: credentials });
+  for (status of [400, 401, 403, 429, 500]) {
+    for (const route of providerRoutes) {
+      const result = await request(route.path, { ...route, cookie });
+      assert.equal(result.status, status === 429 ? 503 : 502);
+      assert.match(result.body.error, status === 429 ? /quota exceeded/ : status === 500 ? /unavailable/ : /server API key/);
+      for (const key of Object.values(testKeys)) assert.ok(!result.text.includes(key));
+    }
+  }
+  assert.equal(bodyReads, 0, 'Raw upstream error bodies must not be forwarded');
+});
+
+test('provider network failures do not expose exception details', async t => {
+  const calls = [];
+  const { request, close } = await start({ ...testKeys, fetchImpl: async (url, options) => {
+    calls.push({ url, options });
+    throw new Error(`Redirect to https://unexpected.example/?key=${testKeys.youtubeKey}`);
+  } }); t.after(close);
+  const { cookie } = await request('/api/auth/register', { method: 'POST', body: credentials });
+  for (const route of providerRoutes) {
+    const result = await request(route.path, { ...route, cookie });
+    assert.equal(result.status, 502);
+    assert.match(result.body.error, /unavailable or timed out/);
+    assert.ok(!result.text.includes('unexpected.example'));
+    for (const key of Object.values(testKeys)) assert.ok(!result.text.includes(key));
+  }
+  assert.equal(calls.length, 3);
+  for (const call of calls) assert.equal(call.options.redirect, 'error');
+});
+
+test('a real HTTP redirect is rejected before credentials reach the redirected endpoint', async t => {
+  let redirectedRequests = 0;
+  let initialKey;
+  const provider = createServer((req, res) => {
+    if (req.url === '/redirect') {
+      initialKey = req.headers['x-goog-api-key'];
+      res.writeHead(302, { Location: '/capture' });
+    } else { redirectedRequests++; res.writeHead(200); }
+    res.end();
+  });
+  await new Promise(resolve => provider.listen(0, '127.0.0.1', resolve));
+  t.after(() => new Promise(resolve => { provider.close(resolve); provider.closeAllConnections(); }));
+  const { request, close } = await start({ ...testKeys,
+    fetchImpl: (_url, options) => fetch(`http://127.0.0.1:${provider.address().port}/redirect`, options)
+  }); t.after(close);
+  const { cookie } = await request('/api/auth/register', { method: 'POST', body: credentials });
+  const result = await request('/api/chat', { method: 'POST', cookie, body: { message: 'Hello' } });
+  assert.equal(initialKey, testKeys.geminiKey);
+  assert.equal(result.status, 502);
+  assert.equal(redirectedRequests, 0);
+  assert.ok(!result.text.includes(testKeys.geminiKey));
 });

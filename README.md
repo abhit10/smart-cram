@@ -73,6 +73,16 @@ Manual checks:
 4. Clear chat or delete a note, wait for **Saved**, and refresh.
 5. Edit the same account in two tabs. Confirm the outdated tab reports a conflict rather than overwriting the first tab's edits.
 
+## API-key security (issue #4)
+
+Gemini chat, flashcard generation, and YouTube search use authenticated `/api/` routes. Set `GEMINI_API_KEY` and `YOUTUBE_API_KEY` only in the server environment or the ignored `.env` file. The committed `.env.example` contains empty key values. Never put real keys in browser JavaScript, HTML, screenshots, or issue comments.
+
+The backend serves only explicitly allowed public assets; `.env` variants, server source, and database files are not public. Provider requests reject redirects so credentials cannot follow a redirect destination. Provider failures return fixed, readable messages rather than raw upstream errors or exception details.
+
+The security tests exercise all three routes without credentials, with missing keys, and with rejected keys, quota errors, and network failures. They also inspect served frontend assets for provider key configuration and fake server key values. These are regression checks, not a comprehensive secret scanner. Live provider access requires a separate check with valid keys.
+
+To verify locally, sign in, open the browser Network panel, and use chat, flashcard generation, and video search. Requests should go to `/api/chat`, `/api/flashcards/generate`, and `/api/youtube/search`; provider credentials should never appear in browser requests or responses. A YouTube player, thumbnails, and existing CDN libraries still use external URLs. If a real key was previously published, revoke/rotate it with its provider; removing it from the latest source does not remove it from Git history.
+
 ## Deployment notes
 
 This is a single-server backend suitable for local development and the lab demonstration. For deployment, use a Node host with persistent disk (GitHub Pages cannot run this server), HTTPS, `COOKIE_SECURE=true`, and the exact public `APP_ORIGIN`. Put it behind a reverse proxy; the app intentionally does not trust forwarded IP headers. Review operational limits before wider use. Email verification, password reset, and multi-server rate limiting are not implemented.

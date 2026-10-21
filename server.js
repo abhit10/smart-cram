@@ -121,7 +121,8 @@ export function createApp({ databasePath = process.env.DATABASE_PATH || resolve(
   }
   async function upstream(url, options, service) {
     let response;
-    try { response = await fetchImpl(url, { ...options, signal: AbortSignal.timeout(30000) }); }
+    // Never forward provider credentials to a redirect destination.
+    try { response = await fetchImpl(url, { ...options, redirect: 'error', signal: AbortSignal.timeout(30000) }); }
     catch { throw fail(502, `${service} is unavailable or timed out. Please try again.`); }
     if (!response.ok) {
       if ([400, 401, 403].includes(response.status)) throw fail(502, `${service} rejected the request. Check the server API key, model, and API access.`);
