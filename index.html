@@ -142,17 +142,22 @@
                         <i class="fas fa-chart-line"></i>
                     </div>
                     <h3>Progress Tracking</h3>
-                    <p>Monitor your improvement</p>
+                    <p id="study-progress">Your saved study progress</p>
                 </div>
                 <div class="feature-card">
                     <div class="feature-icon">
                         <i class="fas fa-users"></i>
                     </div>
-                    <h3>Collaborative Study</h3>
-                    <p>Learn together with peers</p>
+                    <h3>Share Study Notes</h3>
+                    <p>Export and import notes with classmates</p>
                 </div>
             </div>
 
+            <div class="study-toolbar">
+                <p id="service-status" role="status">Checking study services…</p>
+                <button onclick="downloadStudyBackup()">Download backup</button>
+                <label class="file-button">Import backup / shared notes<input type="file" accept=".json,application/json" onchange="importStudyFile(this)"></label>
+            </div>
             <div class="info-banner">
                 <div class="info-icon">✓</div>
                 <p>Select History from the navbar to get started</p>
@@ -185,6 +190,13 @@
                     <div class="panel-header">
                         <h3 id="pdf-title">Textbook</h3>
                     </div>
+                    <div class="study-toolbar">
+                        <label class="file-button">Upload textbook PDF<input id="textbook-upload" type="file" accept="application/pdf,.pdf" onchange="uploadTextbook(this)"></label>
+                        <button onclick="renderTextbookPage(textbookPage - 1)">Previous page</button>
+                        <label>Page <input id="textbook-page" type="number" min="1" value="1" onchange="renderTextbookPage(this.value)"></label><span id="textbook-count"></span>
+                        <button onclick="renderTextbookPage(textbookPage + 1)">Next page</button>
+                        <label>Search textbook <input id="textbook-search" type="search" onkeydown="if(event.key === 'Enter') findInTextbook()"></label><button id="textbook-find" onclick="findInTextbook()">Find</button>
+                    </div>
                     <div class="pdf-content">
                         <div id="pdf-viewer" class="pdf-viewer">
                             <div class="pdf-placeholder">
@@ -206,7 +218,7 @@
                     <i class="fas fa-arrow-left"></i>
                     <span>Back to Home</span>
                 </button>
-                <h2 id="flashcards-title">Select a Subject for Flashcards</h2>
+                <h2 id="flashcards-title">Flashcards</h2><button onclick="editFlashcard()">Create flashcard</button>
             </div>
 
             <div id="flashcard-content" class="flashcard-content">
@@ -240,6 +252,7 @@
                 </div>
 
                 <div class="flashcard-controls">
+                    <button onclick="editFlashcard(true)">Edit card</button><button onclick="deleteFlashcard()">Delete card</button>
                     <button class="control-btn" onclick="previousCard()">
                         <i class="fas fa-arrow-left"></i>
                         Previous
@@ -267,6 +280,7 @@
                     <span>Cheatsheet Name</span>
                 </h2>
                 <div class="cheatsheet-actions">
+                    <button onclick="editNote()">Add note</button><button onclick="renameCheatsheet()">Rename</button><button onclick="deleteCheatsheet()">Delete cheatsheet</button><button onclick="shareCheatsheet()">Share notes (JSON)</button>
                     <button class="generate-flashcards-btn" onclick="generateFlashcardsFromCheatsheet()">
                         <i class="fas fa-play"></i>
                         AI Generate Flashcards
@@ -328,8 +342,9 @@
             </div>
         </div>
         <div class="chat-input">
+            <span id="chat-status" role="status"></span>
             <input type="text" id="chat-input" placeholder="Ask me anything about your studies..." onkeypress="handleChatKeypress(event)">
-            <button onclick="sendMessage()">
+            <button id="chat-send" aria-label="Send message" onclick="sendMessage()">
                 <i class="fas fa-paper-plane"></i>
             </button>
         </div>
@@ -339,7 +354,7 @@
     <div id="cheatsheet-modal" class="modal hidden">
         <div class="modal-content">
             <h3>Create New Cheatsheet</h3>
-            <input type="text" id="cheatsheet-name" placeholder="Enter cheatsheet name..." onkeypress="handleCheatsheetKeypress(event)">
+            <input type="text" id="cheatsheet-name" maxlength="120" placeholder="Enter cheatsheet name..." onkeypress="handleCheatsheetKeypress(event)">
             <div class="modal-actions">
                 <button class="cancel-btn" onclick="closeCheatsheetModal()">Cancel</button>
                 <button class="create-btn" onclick="createCheatsheet()">Create</button>
@@ -394,13 +409,22 @@
         </div>
     </div>
 
+    <div id="editor-modal" class="modal hidden">
+        <form class="modal-content" onsubmit="submitEditor(event)">
+            <h3 id="editor-title">Edit</h3>
+            <label><span id="editor-first-label">Text</span><textarea id="editor-first" required rows="5"></textarea></label>
+            <label id="editor-second-wrap"><span id="editor-second-label">Answer</span><textarea id="editor-second" rows="5"></textarea></label>
+            <div class="modal-actions"><button type="button" onclick="closeEditor()">Cancel</button><button type="submit">Save</button></div>
+        </form>
+    </div>
     <!-- PDF Export -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="/vendor/jspdf.js"></script>
     <!-- DOCX Export -->
-    <script src="https://cdn.jsdelivr.net/npm/docx@8.3.0/build/index.umd.js"></script>
+    <script src="/vendor/docx.js"></script>
     <!-- Main App Script -->
     <script src="account.js"></script>
     <script src="script.js"></script>
+    <script src="study-tools.js"></script>
     <div id="video-search-modal" class="modal hidden">
         <div class="modal-content">
             <h3>Search Educational Videos</h3>
@@ -428,6 +452,7 @@
             <div class="video-player-container">
                 <iframe 
                     id="video-player-iframe"
+                    referrerpolicy="strict-origin-when-cross-origin"
                     width="100%" 
                     height="100%" 
                     frameborder="0" 

@@ -4,7 +4,7 @@ A study app for question papers, cheatsheets, AI explanations, flashcards, and e
 
 ## Run locally
 
-1. Install **Node.js 22.13 or newer** (the project uses built-in `node:sqlite`). No npm dependencies or database installation are required.
+1. Install **Node.js 22.13 or newer** (the project uses built-in `node:sqlite`), then run `npm ci`. No separate database installation is required. PDF.js, jsPDF, and docx are installed from the lockfile and served locally.
 2. Copy `.env.example` to `.env` in the project folder. In PowerShell:
 
    ```powershell
@@ -22,7 +22,17 @@ A study app for question papers, cheatsheets, AI explanations, flashcards, and e
 
 Use the server URL, rather than opening `index.html` directly or using Live Server. If changing the port or hostname, update `PORT` and `APP_ORIGIN` together and open that exact origin. `HOST` defaults to the local machine only.
 
-The optional textbook is not included. Place `NCERT-Class-10-History.pdf` in the project folder to enable the textbook viewer. Question-paper JSON files are included. Some existing browser features load libraries and icons from CDNs and need internet access.
+The textbook is not included. Select **Subjects → History → Upload textbook PDF** to save a PDF of up to 25 MB privately to your account. Alternatively, place `NCERT-Class-10-History.pdf` in the project folder as a shared default. Question-paper JSON files are included. Only icon fonts, AI requests, and YouTube features need external services; PDF viewing and exports use local libraries.
+
+## Study features
+
+- **Textbook:** upload, navigate pages, select text from the reading area below the page, search keywords, and add matching passages to a cheatsheet. Search uses extracted PDF text and exact excerpts, not generated answers or hard-coded chapter page ranges. Scanned image-only PDFs require OCR first; password-protected PDFs must be unlocked before upload.
+- **Question papers:** choose a year, select a question for AI explanation/answer, find matching textbook content, and mark questions studied. The home screen shows saved progress.
+- **Cheatsheets:** create, rename, delete, add/edit/delete notes, or add selected textbook/chat text. Export Word or PDF; long notes span multiple PDF pages.
+- **Flashcards:** create/edit/delete cards manually without an AI key, flip and navigate cards, or generate cards from a cheatsheet. Generation appends to existing cards. Saved cards and position survive reloads.
+- **Chat:** ask follow-up questions with bounded recent conversation context. A pending reply is shown; duplicate sends are blocked until it finishes.
+- **Sharing and backups:** export the current cheatsheet as JSON for a classmate, or download an account backup. Import either file from the home screen. Import merges data, renames duplicate sheets, and validates it on the server before changing the displayed data. Progress is retained from the current account. Sharing is file-based, not live collaborative editing.
+- **Service status:** the home screen reports whether AI/video keys are configured and whether a textbook is available. A configured key is not proof of provider access or remaining quota.
 
 ## Accounts and persistence
 
@@ -37,7 +47,7 @@ Database files and `.env` are ignored by Git. Back up the database with the serv
 
 ## API
 
-All mutation requests require `Content-Type: application/json`. Protected routes use the session cookie; no user ID is accepted for selecting someone else's data. Errors return `{ "error": "A readable message" }`.
+Mutation requests require `Content-Type: application/json`, except textbook uploads, which use `application/pdf`. Protected routes use the session cookie; no user ID is accepted for selecting someone else's data. Errors return `{ "error": "A readable message" }`.
 
 | Method | Route | Purpose / request |
 | --- | --- | --- |
@@ -50,11 +60,13 @@ All mutation requests require `Content-Type: application/json`. Protected routes
 | PUT | `/api/data` | `{ cheatsheets, chatMessages, generatedFlashcards, progress, revision }`; atomically saves account data |
 | GET | `/api/cheatsheets` | Cheatsheets plus `revision` |
 | POST | `/api/cheatsheets` | `{ cheatsheet: { name, items: [] }, revision }`; appends a cheatsheet |
-| POST | `/api/chat` | `{ message, systemPrompt? }`; returns `{ reply }` |
+| GET | `/api/services` | Configuration availability (booleans only, no secrets) |
+| GET/PUT | `/api/textbook` | Read/upload the current user's PDF; uploads limited to 25 MB |
+| POST | `/api/chat` | `{ message, systemPrompt?, history? }`; returns `{ reply }` |
 | POST | `/api/flashcards/generate` | `{ content }`; returns `{ flashcards: [{ question, answer }] }` |
 | GET | `/api/youtube/search?q=topic` | Returns `{ videos }` |
 
-The frontend saves chat responses and generated cards through `/api/data`; the generation endpoints do not independently save them. Chat prompts are currently single-turn. Revision conflicts return 409, invalid input 400, unauthenticated access 401, and missing provider keys 503. Requests have a 2 MB limit. Authentication is limited to 20 attempts per IP per 15 minutes; provider calls to 30 per account per minute. Limits are local to one server process and reset when it restarts.
+The frontend saves chat responses and generated cards through `/api/data`; the generation endpoints do not independently save them. Chat history accepts up to 20 messages with a total limit of 100,000 characters; the UI sends up to 10 recent messages. `progress` stores `currentFlashcard` and `completedQuestions`. Revision conflicts return 409, invalid input 400, unauthenticated access 401, and missing provider keys 503. JSON requests have a 2 MB limit. Authentication is limited to 20 attempts per IP per 15 minutes; provider calls to 30 per account per minute. Limits are local to one server process and reset when it restarts.
 
 ## Verification
 
@@ -72,6 +84,10 @@ Manual checks:
 3. With server keys configured, send a chat message, generate cards from a cheatsheet, and search videos. Refresh to check chat/cards persist.
 4. Clear chat or delete a note, wait for **Saved**, and refresh.
 5. Edit the same account in two tabs. Confirm the outdated tab reports a conflict rather than overwriting the first tab's edits.
+6. Upload a searchable PDF, change page, search a phrase, and create a cheatsheet from the matching passage. Refresh and confirm the uploaded textbook remains available only to that account.
+7. Edit notes, export Word/PDF, create a manual flashcard, and import a shared notes file. Mark a question studied and verify progress after refresh.
+
+For reproducible browser checks without paid APIs or real account data, run `node test-support/browser-preview.js` and open `http://127.0.0.1:3001`. Sign in with `test@example.com` / `Browser-test-only-123`. This separate in-memory fixture uses a two-page generated textbook and labelled mock AI/video responses; it is never used by `npm start`. Live YouTube playback and real provider credentials must be checked separately.
 
 ## API-key security (issue #4)
 
@@ -81,7 +97,7 @@ The backend serves only explicitly allowed public assets; `.env` variants, serve
 
 The security tests exercise all three routes without credentials, with missing keys, and with rejected keys, quota errors, and network failures. They also inspect served frontend assets for provider key configuration and fake server key values. These are regression checks, not a comprehensive secret scanner. Live provider access requires a separate check with valid keys.
 
-To verify locally, sign in, open the browser Network panel, and use chat, flashcard generation, and video search. Requests should go to `/api/chat`, `/api/flashcards/generate`, and `/api/youtube/search`; provider credentials should never appear in browser requests or responses. A YouTube player, thumbnails, and existing CDN libraries still use external URLs. If a real key was previously published, revoke/rotate it with its provider; removing it from the latest source does not remove it from Git history.
+To verify locally, sign in, open the browser Network panel, and use chat, flashcard generation, and video search. Requests should go to `/api/chat`, `/api/flashcards/generate`, and `/api/youtube/search`; provider credentials should never appear in browser requests or responses. The YouTube player, thumbnails, and icon font still use external URLs. The player sends only the app origin as its cross-origin referrer, as required by YouTube. If a real key was previously published, revoke/rotate it with its provider; removing it from the latest source does not remove it from Git history.
 
 ## Deployment notes
 

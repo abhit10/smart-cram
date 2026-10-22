@@ -43,9 +43,11 @@ function validateData(data) {
   }
   const currentFlashcard = data.progress?.currentFlashcard ?? 0;
   if (!Number.isSafeInteger(currentFlashcard) || currentFlashcard < 0) throw fail(400, 'Invalid progress.');
+  const completedQuestions = data.progress?.completedQuestions ?? [];
+  if (!Array.isArray(completedQuestions) || completedQuestions.length > 2000 || completedQuestions.some(key => typeof key !== 'string' || key.length > 150)) throw fail(400, 'Invalid question progress.');
   // Retain only the fields owned by this API.
   return { cheatsheets: data.cheatsheets, chatMessages: data.chatMessages,
-    generatedFlashcards: data.generatedFlashcards, progress: { currentFlashcard } };
+    generatedFlashcards: data.generatedFlashcards, progress: { currentFlashcard, completedQuestions: [...new Set(completedQuestions)] } };
 }
 
 async function readJson(req) {
@@ -71,7 +73,7 @@ export function createApp({ databasePath = process.env.DATABASE_PATH || resolve(
   origin = process.env.APP_ORIGIN || 'http://localhost:3000',
   secureCookie = process.env.COOKIE_SECURE === 'true',
   geminiKey = process.env.GEMINI_API_KEY || '', youtubeKey = process.env.YOUTUBE_API_KEY || '',
-  geminiModel = process.env.GEMINI_MODEL || 'gemini-2.5-flash', fetchImpl = fetch } = {}) {
+  geminiModel = process.env.GEMINI_MODEL || 'gemini-3.8-flash', fetchImpl = fetch } = {}) {
   if (databasePath !== ':memory:') mkdirSync(dirname(resolve(databasePath)), { recursive: true });
   const db = new DatabaseSync(databasePath);
   db.exec(`PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA busy_timeout=5000;
@@ -84,6 +86,9 @@ export function createApp({ databasePath = process.env.DATABASE_PATH || resolve(
     );
     CREATE TABLE IF NOT EXISTS study_data (
       user_id INTEGER PRIMARY KEY REFERENCES users(id), data TEXT NOT NULL, revision INTEGER NOT NULL DEFAULT 0
+    );
+    CREATE TABLE IF NOT EXISTS textbooks (
+      user_id INTEGER PRIMARY KEY REFERENCES users(id), pdf BLOB NOT NULL
     );`);
   const limits = new Map();
   function limit(key, max, interval) {
@@ -125,17 +130,18 @@ export function createApp({ databasePath = process.env.DATABASE_PATH || resolve(
     try { response = await fetchImpl(url, { ...options, redirect: 'error', signal: AbortSignal.timeout(30000) }); }
     catch { throw fail(502, `${service} is unavailable or timed out. Please try again.`); }
     if (!response.ok) {
-      if ([400, 401, 403].includes(response.status)) throw fail(502, `${service} rejected the request. Check the server API key, model, and API access.`);
+      if ([400, 401, 403, 404].includes(response.status)) throw fail(502, `${service} rejected the request. Check the server API key, model, and API access.`);
       if (response.status === 429) throw fail(503, `${service} quota exceeded. Please try again later.`);
       throw fail(502, `${service} is unavailable. Please try again.`);
     }
     try { return await response.json(); } catch { throw fail(502, `${service} returned an invalid response.`); }
   }
-  async function generate(message, systemPrompt) {
+  async function generate(message, systemPrompt, history = [], jsonOutput = false) {
     if (!geminiKey) throw fail(503, 'AI is not configured. Set GEMINI_API_KEY on the server.');
     const data = await upstream(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(geminiModel)}:generateContent`, {
       method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': geminiKey },
-      body: JSON.stringify({ contents: [{ parts: [{ text: message }] }],
+      body: JSON.stringify({ contents: [...history.map(item => ({ role: item.type === 'user' ? 'user' : 'model', parts: [{ text: item.content }] })), { role: 'user', parts: [{ text: message }] }],
+        ...(jsonOutput ? { generationConfig: { responseMimeType: 'application/json' } } : {}),
         ...(systemPrompt ? { systemInstruction: { parts: [{ text: systemPrompt }] } } : {}) })
     }, 'Gemini');
     const reply = data.candidates?.[0]?.content?.parts?.map(part => part.text || '').join('');
@@ -146,6 +152,11 @@ export function createApp({ databasePath = process.env.DATABASE_PATH || resolve(
     ['/', ['index.html', 'text/html']], ['/index.html', ['index.html', 'text/html']],
     ['/script.js', ['script.js', 'text/javascript']], ['/account.js', ['account.js', 'text/javascript']],
     ['/styles.css', ['styles.css', 'text/css']],
+    ['/study-tools.js', ['study-tools.js', 'text/javascript']],
+    ['/vendor/pdf.mjs', ['node_modules/pdfjs-dist/build/pdf.mjs', 'text/javascript']],
+    ['/vendor/pdf.worker.mjs', ['node_modules/pdfjs-dist/build/pdf.worker.mjs', 'text/javascript']],
+    ['/vendor/jspdf.js', ['node_modules/jspdf/dist/jspdf.umd.min.js', 'text/javascript']],
+    ['/vendor/docx.js', ['node_modules/docx/dist/index.iife.js', 'text/javascript']],
     ['/2023-24_history.json', ['2023-24_history.json', 'application/json']],
     ['/2024-25_history.json', ['2024-25_history.json', 'application/json']],
     ['/NCERT-Class-10-History.pdf', ['NCERT-Class-10-History.pdf', 'application/pdf']]
@@ -215,6 +226,30 @@ export function createApp({ databasePath = process.env.DATABASE_PATH || resolve(
         throw fail(409, 'The signed-in account changed in another tab. Download a backup of unsaved edits and reload.');
       }
       if (path === '/api/auth/me' && req.method === 'GET') return json(200, { user });
+      if (path === '/api/services' && req.method === 'GET') {
+        let textbook = !!db.prepare('SELECT 1 FROM textbooks WHERE user_id=?').get(user.id);
+        if (!textbook) { try { readFileSync(resolve(root, 'NCERT-Class-10-History.pdf')); textbook = true; } catch {} }
+        return json(200, { ai: !!geminiKey, videos: !!youtubeKey, textbook });
+      }
+      if (path === '/api/textbook' && req.method === 'PUT') {
+        if (req.headers['content-type'] !== 'application/pdf') throw fail(415, 'Choose a PDF textbook.');
+        const chunks = []; let size = 0;
+        for await (const chunk of req) {
+          size += chunk.length;
+          if (size > 25 * 1024 * 1024) throw fail(413, 'Choose a PDF smaller than 25 MB.');
+          chunks.push(chunk);
+        }
+        const pdf = Buffer.concat(chunks);
+        if (pdf.subarray(0, 5).toString() !== '%PDF-') throw fail(400, 'The selected file is not a PDF.');
+        db.prepare('INSERT INTO textbooks(user_id,pdf) VALUES(?,?) ON CONFLICT(user_id) DO UPDATE SET pdf=excluded.pdf').run(user.id, pdf);
+        return json(200, { ok: true });
+      }
+      if (path === '/api/textbook' && req.method === 'GET') {
+        let pdf = db.prepare('SELECT pdf FROM textbooks WHERE user_id=?').get(user.id)?.pdf;
+        if (!pdf) { try { pdf = readFileSync(resolve(root, 'NCERT-Class-10-History.pdf')); } catch { throw fail(404, 'Upload a textbook PDF to start reading.'); } }
+        res.writeHead(200, { 'Content-Type': 'application/pdf', 'Cache-Control': 'no-store' });
+        return res.end(pdf);
+      }
       if (path === '/api/data' && req.method === 'GET') return json(200, getData(user.id));
       if (path === '/api/data' && req.method === 'PUT') {
         const body = await readJson(req);
@@ -234,14 +269,19 @@ export function createApp({ databasePath = process.env.DATABASE_PATH || resolve(
         const body = await readJson(req);
         const message = string(body.message, 'Message', 150000);
         const prompt = body.systemPrompt == null ? 'You are a helpful study assistant.' : string(body.systemPrompt, 'System prompt', 10000);
-        return json(200, { reply: await generate(message, prompt) });
+        const history = body.history ?? [];
+        if (!Array.isArray(history) || history.length > 20 || history.some(item => !['user', 'bot'].includes(item?.type) || typeof item.content !== 'string' || !item.content.trim() || item.content.length > 20000) || JSON.stringify(history).length > 100000) throw fail(400, 'Chat history is too long or invalid.');
+        return json(200, { reply: await generate(message, prompt, history) });
       }
       if (path === '/api/flashcards/generate' && req.method === 'POST') {
         limit(`provider:${user.id}`, 30, 60000);
         const body = await readJson(req);
         const content = string(body.content, 'Cheatsheet content', 150000);
-        const reply = await generate(content, 'Create at least 10 concise flashcards for active recall from this content. Return only pairs in the format Q: question followed by A: answer, with each Q: on a new line.');
-        const flashcards = [...reply.matchAll(/Q:\s*(.+?)\s*A:\s*(.+?)(?=\nQ:|$)/gs)].map(pair => ({ question: pair[1].trim(), answer: pair[2].trim() }));
+        const reply = await generate(content, 'Create 10 concise flashcards for active recall from this content. Return a JSON array of objects with string fields question and answer. Do not invent facts absent from the notes.', [], true);
+        let flashcards;
+        try { flashcards = JSON.parse(reply.replace(/^```(?:json)?\s*|\s*```$/g, '')); }
+        catch { flashcards = [...reply.matchAll(/Q:\s*(.+?)\s*A:\s*(.+?)(?=\nQ:|$)/gs)].map(pair => ({ question: pair[1].trim(), answer: pair[2].trim() })); }
+        if (!Array.isArray(flashcards) || flashcards.length > 100 || flashcards.some(card => typeof card?.question !== 'string' || !card.question.trim() || card.question.length > 10000 || typeof card.answer !== 'string' || !card.answer.trim() || card.answer.length > 100000)) throw fail(502, 'AI returned invalid flashcards. Please try again.');
         if (!flashcards.length) throw fail(502, 'AI returned no valid flashcards. Please try again.');
         return json(200, { flashcards });
       }

@@ -2113,3 +2113,15 @@ body {
 .sync-bar { position: fixed; bottom: 0; left: 0; z-index: 999; max-width: 80vw; padding: 6px 12px; background: #eef2ff; color: #312e81; font-size: 12px; border-radius: 0 8px 0 0; }
 .sync-bar button { margin-left: 8px; cursor: pointer; }
 .message p, .cheatsheet-item-content { white-space: pre-wrap; }
+.study-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 14px; background: #eef2ff; border-radius: 8px; }
+.study-toolbar input[type=number] { width: 65px; }
+.study-toolbar button, .cheatsheet-actions > button, .flashcards-header > button, .flashcard-controls > button, .modal-actions > button { border: 1px solid #c7d2fe; border-radius: 7px; background: white; color: #312e81; padding: 9px 12px; cursor: pointer; }
+.file-button { display: grid; gap: 6px; font-size: 13px; }
+.file-button input { max-width: 240px; }
+#pdf-viewer { overflow: auto; display: block; }
+#pdf-viewer canvas { display: block; max-width: 100%; height: auto; margin: auto; }
+.textbook-text { white-space: pre-wrap; padding: 20px; line-height: 1.7; background: white; user-select: text; }
+#editor-modal textarea { display: block; width: 100%; padding: 10px; margin: 8px 0 16px; border: 1px solid #cbd5e1; border-radius: 8px; font: inherit; }
+#chat-status { font-size: 12px; color: #475569; }
+.cheatsheet-actions { flex-wrap: wrap; }
+button:disabled { cursor: wait; opacity: .6; }

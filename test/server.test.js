@@ -10,10 +10,10 @@ async function start(options = {}) {
   const app = createApp({ databasePath: ':memory:', geminiKey: '', youtubeKey: '', ...options });
   await new Promise(resolve => app.listen(0, '127.0.0.1', resolve));
   const base = `http://127.0.0.1:${app.address().port}`;
-  async function request(path, { method = 'GET', body, cookie, headers = {} } = {}) {
+  async function request(path, { method = 'GET', body, rawBody, cookie, headers = {} } = {}) {
     const response = await fetch(base + path, { method,
       headers: { 'Content-Type': 'application/json', ...(cookie ? { Cookie: cookie } : {}), ...headers },
-      ...(body !== undefined ? { body: JSON.stringify(body) } : {}) });
+      ...(rawBody !== undefined ? { body: rawBody } : body !== undefined ? { body: JSON.stringify(body) } : {}) });
     const text = await response.text();
     let parsed = null;
     try { parsed = JSON.parse(text); } catch {}
@@ -25,7 +25,7 @@ async function start(options = {}) {
 }
 const credentials = { name: 'Student', email: 'student@example.com', password: 'test-password-123' };
 const studyData = { cheatsheets: [{ name: 'History', items: [{ text: 'A note', source: 'PDF', addedAt: '2026-10-09' }] }],
-  chatMessages: [{ type: 'user', content: 'Hello' }], generatedFlashcards: [{ question: 'Q', answer: 'A' }], progress: { currentFlashcard: 0 } };
+  chatMessages: [{ type: 'user', content: 'Hello' }], generatedFlashcards: [{ question: 'Q', answer: 'A' }], progress: { currentFlashcard: 0, completedQuestions: ['history/2024-25/2'] } };
 
 test('registration, login, per-user storage, conflicts, deletion and logout', async t => {
   const { request, close } = await start(); t.after(close);
@@ -118,7 +118,7 @@ const testKeys = { geminiKey: 'fake-gemini-private-value', youtubeKey: 'fake-you
 
 test('public assets contain no provider configuration or server key values', async t => {
   const { request, close } = await start(testKeys); t.after(close);
-  for (const path of ['/', '/index.html', '/script.js', '/account.js', '/styles.css', '/2023-24_history.json', '/2024-25_history.json']) {
+  for (const path of ['/', '/index.html', '/script.js', '/account.js', '/study-tools.js', '/styles.css', '/2023-24_history.json', '/2024-25_history.json']) {
     const result = await request(path);
     assert.equal(result.status, 200, path);
     for (const key of Object.values(testKeys)) assert.ok(!result.text.includes(key), path);
@@ -212,4 +212,38 @@ test('a real HTTP redirect is rejected before credentials reach the redirected e
   assert.equal(result.status, 502);
   assert.equal(redirectedRequests, 0);
   assert.ok(!result.text.includes(testKeys.geminiKey));
+});
+
+test('uploaded textbooks are authenticated, persist, and remain private to each account', async t => {
+  const { request, close } = await start(); t.after(close);
+  const pdf = '%PDF-1.7\nprivate textbook fixture\n%%EOF';
+  const upload = { method: 'PUT', rawBody: pdf, headers: { 'Content-Type': 'application/pdf' } };
+  assert.equal((await request('/api/textbook', upload)).status, 401);
+  const { cookie } = await request('/api/auth/register', { method: 'POST', body: credentials });
+  assert.equal((await request('/api/textbook', { ...upload, cookie, rawBody: 'not a pdf' })).status, 400);
+  assert.equal((await request('/api/textbook', { ...upload, cookie })).status, 200);
+  assert.equal((await request('/api/textbook', { cookie })).text, pdf);
+  assert.equal((await request('/api/services', { cookie })).body.textbook, true);
+  const other = await request('/api/auth/register', { method: 'POST', body: { ...credentials, email: 'reader@example.com' } });
+  const otherTextbook = await request('/api/textbook', { cookie: other.cookie });
+  assert.notEqual(otherTextbook.text, pdf);
+  assert.equal((await request('/api/textbook', { cookie: other.cookie, headers: { 'X-Account-Id': '1' } })).status, 409);
+});
+
+test('chat carries conversation context and flashcards accept structured responses', async t => {
+  let sent;
+  let output = '[{"question":"When?","answer":"1789"}]';
+  const { request, close } = await start({ geminiKey: 'test-key', fetchImpl: async (_url, options) => {
+    sent = JSON.parse(options.body);
+    return { ok: true, json: async () => ({ candidates: [{ content: { parts: [{ text: output }] } }] }) };
+  } }); t.after(close);
+  const { cookie } = await request('/api/auth/register', { method: 'POST', body: credentials });
+  const chat = await request('/api/chat', { method: 'POST', cookie, body: { message: 'What happened next?', history: [{ type: 'user', content: 'Tell me about 1789' }, { type: 'bot', content: 'The revolution began.' }] } });
+  assert.equal(chat.status, 200);
+  assert.deepEqual(sent.contents.map(item => item.role), ['user', 'model', 'user']);
+  const cards = await request('/api/flashcards/generate', { method: 'POST', cookie, body: { content: 'French Revolution 1789' } });
+  assert.deepEqual(cards.body.flashcards, [{ question: 'When?', answer: '1789' }]);
+  assert.equal(sent.generationConfig.responseMimeType, 'application/json');
+  output = '[{"question":"","answer":42}]';
+  assert.equal((await request('/api/flashcards/generate', { method: 'POST', cookie, body: { content: 'Notes' } })).status, 502);
 });

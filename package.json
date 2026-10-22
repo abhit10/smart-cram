@@ -4,10 +4,20 @@
   "private": true,
   "description": "Smart Cram study app with a Node.js and SQLite backend",
   "type": "module",
-  "engines": { "node": ">=22.13.0" },
+  "engines": {
+    "node": ">=22.13.0"
+  },
   "scripts": {
     "start": "node --env-file-if-exists=.env server.js",
     "test": "node --test",
-    "check": "node --check server.js && node --check script.js && node --check account.js"
+    "check": "node --check server.js && node --check script.js && node --check account.js && node --check study-tools.js"
+  },
+  "dependencies": {
+    "docx": "9.13.0",
+    "jspdf": "4.2.1",
+    "pdfjs-dist": "6.4.299"
+  },
+  "devDependencies": {
+    "jsdom": "27.4.0"
   }
 }

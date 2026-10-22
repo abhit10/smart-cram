@@ -28,55 +28,6 @@ const state = {
 // ============================================================
 // ===== CHAPTER CONFIGURATION =====
 // ============================================================
-const CHAPTER_CONFIG = {
-  history: {
-    chapters: [
-      {
-        name: "The Rise of Nationalism in Europe",
-        pageStart: 3,
-        pageEnd: 25,
-        keywords: ["nationalism", "europe", "french revolution", "napoleon", "unification", "italy", "germany"]
-      },
-      {
-        name: "Nationalism in Indo-China",
-        pageStart: 25,
-        pageEnd: 49,
-        keywords: ["indo-china", "vietnam", "french colonial", "ho chi minh", "tonkin", "annam", "cochin china"]
-      },
-      {
-        name: "Nationalism in India",
-        pageStart: 49,
-        pageEnd: 77,
-        keywords: ["india", "gandhi", "non-cooperation", "civil disobedience", "salt march", "khilafat", "rowlatt"]
-      },
-      {
-        name: "The Making of a Global World",
-        pageStart: 77,
-        pageEnd: 97,
-        keywords: ["globalization", "trade", "migration", "silk routes", "food travels", "nineteenth century"]
-      },
-      {
-        name: "The Age of Industrialisation",
-        pageStart: 97,
-        pageEnd: 117,
-        keywords: ["industrial revolution", "factories", "britain", "spinning jenny", "steam engine", "coal"]
-      },
-      {
-        name: "Work, Life and Leisure",
-        pageStart: 117,
-        pageEnd: 141,
-        keywords: ["london", "bombay", "city", "urbanization", "leisure", "cinema", "housing"]
-      },
-      {
-        name: "Print Culture and the Modern World",
-        pageStart: 141,
-        pageEnd: 159,
-        keywords: ["print", "printing press", "gutenberg", "books", "newspapers", "censorship", "reformation"]
-      }
-    ]
-  }
-};
-
 const CONFIG = {
   textbookPaths: {
     history: "NCERT-Class-10-History.pdf"
@@ -98,9 +49,9 @@ const subjects = {
 // ===== AI INTEGRATION FUNCTIONS (GEMINI) =====
 // ============================================================
 
-async function callAI(userMessage, systemPrompt = null) {
+async function callAI(userMessage, systemPrompt = null, history = []) {
   const data = await apiRequest('/api/chat', {
-    method: 'POST', body: JSON.stringify({ message: userMessage, systemPrompt })
+    method: 'POST', body: JSON.stringify({ message: userMessage, systemPrompt, history })
   });
   return data.reply;
 }
@@ -247,237 +198,6 @@ function openInYouTube(videoId) {
 // ===== CHAPTER DETECTION & PDF TEXT EXTRACTION =====
 // ============================================================
 
-function detectChapterFromQuestion(questionText, subject) {
-  const chapters = CHAPTER_CONFIG[subject]?.chapters || [];
-  
-  const questionLower = questionText.toLowerCase();
-  
-  const chapterScores = chapters.map((chapter, index) => {
-    let score = 0;
-    chapter.keywords.forEach(keyword => {
-      if (questionLower.includes(keyword.toLowerCase())) {
-        score += 1;
-      }
-    });
-    return { chapter, index, score };
-  });
-  
-  chapterScores.sort((a, b) => b.score - a.score);
-  
-  if (chapterScores[0].score > 0) {
-    return chapterScores[0].chapter;
-  }
-  
-  return null;
-}
-
-async function extractPDFChapter(pdfUrl, pageStart, pageEnd, chapterName) {
-  try {
-    if (typeof pdfjsLib === 'undefined') {
-      await loadPDFJS();
-    }
-
-    const loadingTask = pdfjsLib.getDocument(pdfUrl);
-    const pdf = await loadingTask.promise;
-    let chapterText = '';
-
-    for (let pageNum = pageStart; pageNum <= Math.min(pageEnd, pdf.numPages); pageNum++) {
-      const page = await pdf.getPage(pageNum);
-      const textContent = await page.getTextContent();
-      const pageText = textContent.items.map(item => item.str).join(' ');
-      chapterText += `\n--- Page ${pageNum} ---\n${pageText}`;
-    }
-
-    return chapterText;
-  } catch (error) {
-    console.error('PDF chapter extraction error:', error);
-    return null;
-  }
-}
-
-async function extractPDFText(pdfUrl) {
-  try {
-    if (typeof pdfjsLib === 'undefined') {
-      await loadPDFJS();
-    }
-
-    const loadingTask = pdfjsLib.getDocument(pdfUrl);
-    const pdf = await loadingTask.promise;
-    let fullText = '';
-
-    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-      const page = await pdf.getPage(pageNum);
-      const textContent = await page.getTextContent();
-      const pageText = textContent.items.map(item => item.str).join(' ');
-      fullText += `\n--- Page ${pageNum} ---\n${pageText}`;
-    }
-
-    return fullText;
-  } catch (error) {
-    console.error('PDF extraction error:', error);
-    return null;
-  }
-}
-
-function loadPDFJS() {
-  return new Promise((resolve, reject) => {
-    if (typeof pdfjsLib !== 'undefined') {
-      resolve();
-      return;
-    }
-
-    const script = document.createElement('script');
-    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
-    script.onload = () => {
-      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-      resolve();
-    };
-    script.onerror = reject;
-    document.head.appendChild(script);
-  });
-}
-
-// ============================================================
-// ===== OPTIMIZED PDF HIGHLIGHTING WITH CHAPTER DETECTION =====
-// ============================================================
-
-async function highlightInPDF(questionId) {
-  if (!state.selectedSubject || !state.selectedPaper) {
-    showSuccessNotification('❌ Please select a subject and paper first');
-    return;
-  }
-
-  const questions = state.loadedQuestions[state.selectedSubject]?.[state.selectedPaper];
-  
-  if (!questions || questions.length === 0) {
-    showSuccessNotification('❌ No questions loaded');
-    return;
-  }
-
-  const question = questions.find(q => {
-    return q.question_id == questionId || 
-           q.id == questionId || 
-           q.questionid == questionId;
-  });
-
-  if (!question) {
-    console.error('Question not found. Looking for ID:', questionId);
-    showSuccessNotification(`❌ Question ${questionId} not found`);
-    return;
-  }
-
-  showSuccessNotification('🔍 Detecting chapter and analyzing question...');
-
-  try {
-    const detectedChapter = detectChapterFromQuestion(question.text, state.selectedSubject);
-    
-    if (!detectedChapter) {
-      showSuccessNotification('⚠️ Could not detect chapter. Searching entire PDF...');
-      await highlightInPDFFullSearch(question);
-      return;
-    }
-
-    showSuccessNotification(`📖 Found chapter: "${detectedChapter.name}" (Pages ${detectedChapter.pageStart}-${detectedChapter.pageEnd})`);
-
-    const chapterKey = `${state.selectedSubject}_${detectedChapter.name}`;
-    if (!state.pdfChapters[chapterKey]) {
-      showSuccessNotification(`📄 Extracting chapter text from pages ${detectedChapter.pageStart}-${detectedChapter.pageEnd}...`);
-      const pdfUrl = CONFIG.textbookPaths[state.selectedSubject];
-      state.pdfChapters[chapterKey] = await extractPDFChapter(
-        pdfUrl, 
-        detectedChapter.pageStart, 
-        detectedChapter.pageEnd,
-        detectedChapter.name
-      );
-      
-      if (!state.pdfChapters[chapterKey]) {
-        throw new Error('Could not extract chapter text');
-      }
-    }
-
-    const systemPrompt = `You are a precise text matching assistant. Given a question and a textbook chapter, find the most relevant section that would help answer the question.
-
-Return ONLY the exact text excerpt from the textbook (50-200 words) that is most relevant. If you find multiple relevant sections, return the most important one.
-
-Return format: Just the exact text from the document, nothing else.`;
-
-    const chapterText = state.pdfChapters[chapterKey];
-    const tokenEstimate = Math.ceil(chapterText.length / 4);
-    
-    showSuccessNotification(`🤖 Searching chapter (≈${tokenEstimate} tokens)...`);
-
-    const userPrompt = `Question: "${question.text}"
-
-Chapter: ${detectedChapter.name}
-Textbook content (Pages ${detectedChapter.pageStart}-${detectedChapter.pageEnd}):
-${chapterText}
-
-Find and return the most relevant excerpt from the textbook that relates to this question. If no relevant content is found, respond with "NOT FOUND".`;
-
-    const response = await callAI(userPrompt, systemPrompt);
-    
-    if (response && response.length > 20 && !response.includes('NOT FOUND')) {
-      highlightTextInPDFViewer(response, question.text, detectedChapter);
-      showSuccessNotification(`✅ Found relevant section in "${detectedChapter.name}"!`);
-    } else {
-      showSuccessNotification('⚠️ Could not find specific section in chapter');
-    }
-  } catch (error) {
-    console.error('PDF Highlighting Error:', error);
-    showSuccessNotification(`❌ Error: ${error.message}`);
-  }
-}
-
-async function highlightInPDFFullSearch(question) {
-  try {
-    if (!state.pdfText) {
-      showSuccessNotification('📄 Extracting text from entire PDF...');
-      const pdfUrl = CONFIG.textbookPaths[state.selectedSubject];
-      state.pdfText = await extractPDFText(pdfUrl);
-      
-      if (!state.pdfText) {
-        throw new Error('Could not extract PDF text');
-      }
-    }
-
-    const systemPrompt = `You are a precise text matching assistant. Given a question and a textbook, find the most relevant section that would help answer the question.
-
-Return ONLY the exact text excerpt from the textbook (50-200 words) that is most relevant.
-
-Return format: Just the exact text from the document, nothing else.`;
-
-    const chunkSize = 20000;
-    let relevantText = '';
-    
-    for (let i = 0; i < state.pdfText.length; i += chunkSize) {
-      const chunk = state.pdfText.substring(i, i + chunkSize);
-      const userPrompt = `Question: "${question.text}"
-
-Textbook content:
-${chunk}
-
-Find and return the most relevant excerpt from the textbook that relates to this question. If no relevant content is found, respond with "NOT FOUND".`;
-
-      const response = await callAI(userPrompt, systemPrompt);
-      
-      if (response && response.length > 20 && !response.includes('NOT FOUND')) {
-        relevantText = response;
-        break;
-      }
-    }
-
-    if (relevantText && relevantText.length > 20) {
-      highlightTextInPDFViewer(relevantText, question.text, null);
-      showSuccessNotification(`✅ Found relevant section!`);
-    } else {
-      showSuccessNotification('⚠️ Could not find specific section in PDF');
-    }
-  } catch (error) {
-    console.error('Full PDF Search Error:', error);
-    showSuccessNotification(`❌ Error: ${error.message}`);
-  }
-}
-
 function highlightTextInPDFViewer(relevantText, questionText, chapter) {
   const existingOverlay = document.getElementById('highlight-overlay');
   if (existingOverlay) {
@@ -497,7 +217,7 @@ function highlightTextInPDFViewer(relevantText, questionText, chapter) {
   const overlay = document.createElement('div');
   overlay.id = 'highlight-overlay';
   
-  const rightPosition = isChatOpen ? '420px' : '20px';
+  const rightPosition = isChatOpen && window.innerWidth > 900 ? '420px' : '20px';
   
   overlay.style.cssText = `
     position: fixed;
@@ -507,7 +227,7 @@ function highlightTextInPDFViewer(relevantText, questionText, chapter) {
     color: white;
     padding: 0;
     border-radius: 0.75rem;
-    width: 400px;
+    width: min(400px, calc(100vw - 40px));
     max-height: 70vh;
     box-shadow: 0 10px 25px rgba(0,0,0,0.3);
     z-index: 1000;
@@ -538,7 +258,7 @@ function highlightTextInPDFViewer(relevantText, questionText, chapter) {
       </div>
       ${chapterInfo}
       <div style="font-size: 0.75rem; opacity: 0.9; background: rgba(255,255,255,0.1); padding: 0.5rem; border-radius: 0.5rem; margin-bottom: 0.75rem;">
-        <strong>Question:</strong> ${questionText.length > 150 ? questionText.substring(0, 150) + '...' : questionText}
+        <strong>Question:</strong> ${escapeHTML(questionText.length > 150 ? questionText.substring(0, 150) + '...' : questionText)}
       </div>
       <div style="display: flex; gap: 0.5rem;">
         <button onclick="addHighlightToCheatsheet('question')" 
@@ -573,28 +293,7 @@ function highlightTextInPDFViewer(relevantText, questionText, chapter) {
 
   document.body.appendChild(overlay);
 
-  const originalToggleChat = window.toggleChat;
-  window.toggleChat = function() {
-    originalToggleChat();
-    setTimeout(() => {
-      const overlay = document.getElementById('highlight-overlay');
-      if (overlay) {
-        const chatPanel = document.getElementById('chat-panel');
-        const isChatOpen = chatPanel && !chatPanel.classList.contains('hidden');
-        overlay.style.right = isChatOpen ? '420px' : '20px';
-      }
-    }, 50);
-  };
 
-  setTimeout(() => {
-    if (overlay && overlay.parentElement) {
-      overlay.style.animation = 'fadeOut 0.3s ease-out';
-      setTimeout(() => {
-        overlay.remove();
-        state.currentHighlightData = null;
-      }, 300);
-    }
-  }, 60000);
 }
 
 // ============================================================
@@ -668,15 +367,18 @@ async function loadQuestionPaper(subject, year) {
   let questions = [];
   try {
     const resp = await fetch(filePath);
+    if (!resp.ok) throw new Error('Question paper could not be loaded.');
     questions = await resp.json();
+    if (!Array.isArray(questions)) throw new Error('Invalid question paper.');
   } catch (err) {
     console.error('Failed to load questions for', subject, year, err);
+    showSuccessNotification(err.message);
     questions = [];
   }
 
   state.loadedQuestions[subject][year] = questions.map((q, i) => ({
     question_id: q.question_id || q.id || q.questionid || i + 1,
-    text: q.text,
+    text: String(q.text || ''),
     marks: q.marks,
     section: q.section || ''
   }));
@@ -899,20 +601,7 @@ function updateStudyView() {
     document.getElementById("pdf-title").textContent = `${subject.name} Textbook`;
     const pdfPath = CONFIG.textbookPaths[state.selectedSubject];
 
-    if (pdfViewer) {
-      pdfViewer.innerHTML = `
-        <iframe 
-          src="${pdfPath}#toolbar=1&navpanes=0&scrollbar=1" 
-          width="100%" 
-          height="100%" 
-          style="border: none; border-radius: 8px; display: block; min-height: 500px;"
-          title="${subject.name} Textbook PDF">
-          <p>Your browser does not support PDFs. 
-              <a href="${pdfPath}" target="_blank">Download the PDF</a> instead.
-          </p>
-        </iframe>
-      `;
-    }
+    if (pdfViewer) renderTextbookPage();
 
     if (state.selectedPaper && state.loadedQuestions[state.selectedSubject]?.[state.selectedPaper]) {
       questionsPanel.classList.remove("hidden");
@@ -965,9 +654,10 @@ function createQuestionCard(question, index) {
   cleanedText = cleanedText.replace(/\(\d+m\)/gi, "");
   cleanedText = cleanedText.replace(/marks?\s*:\s*\d+/gi, "");
 
-  const formattedText = cleanedText.replace(/\n/g, "<br>");
-  const escapedText = cleanedText.replace(/'/g, "&apos;").replace(/"/g, "&quot;");
+  const formattedText = escapeHTML(cleanedText).replace(/\n/g, "<br>");
+  const escapedText = escapeHTML(cleanedText);
   const qId = question.question_id;
+  const studied = (state.completedQuestions || []).includes(questionProgressKey(qId));
 
   card.innerHTML = `
     <div class="question-header">
@@ -976,9 +666,10 @@ function createQuestionCard(question, index) {
     </div>
     <p class="question-text">${formattedText}</p>
     <div class="question-actions-always">
+      <button onclick="event.stopPropagation(); toggleQuestionStudied('${qId}')">${studied ? '✓ Studied' : 'Mark studied'}</button>
       <button class="highlight-btn" onclick="event.stopPropagation(); highlightInPDF('${qId}')">
         <i class="fas fa-highlighter"></i>
-        Highlight in PDF
+        Find in textbook
       </button>
     </div>
     ${state.selectedQuestion === qId ? `
@@ -1019,7 +710,7 @@ function selectQuestion(questionId) {
 
 async function explainWithAI(questionText) {
 
-  toggleChat();
+  document.getElementById("chat-panel").classList.remove("hidden");
   addChatMessage("user", `Explain this question: ${questionText}`);
 
 
@@ -1188,6 +879,8 @@ function closeFlashcardGenerationModal() {
 }
 
 async function confirmAIFlashcardGeneration() {
+  if (flashcardsBusy || !state.currentCheatsheet?.items?.length) return;
+  flashcardsBusy = true;
   closeFlashcardGenerationModal();
 
   showSuccessNotification("🤖 Generating flashcards with AI... This may take a moment");
@@ -1197,30 +890,26 @@ async function confirmAIFlashcardGeneration() {
     const data = await apiRequest('/api/flashcards/generate', {
       method: 'POST', body: JSON.stringify({ content: fullCheatsheetContent })
     });
-    state.generatedFlashcards = data.flashcards;
+    const firstNewCard = state.generatedFlashcards.length;
+    state.generatedFlashcards.push(...data.flashcards);
 
-    if (state.generatedFlashcards.length === 0) {
+    if (data.flashcards.length === 0) {
       alert("Could not generate flashcards. Please try again. Check your cheatsheet content for sufficient detail.");
       return;
     }
 
     state.currentView = "flashcards";
-    state.currentFlashcard = 0;
+    state.currentFlashcard = firstNewCard;
     state.isFlashcardFlipped = false;
 
-    document.getElementById("flashcards-section").classList.remove("hidden");
-    document.getElementById("cheatsheet-viewer-section").classList.add("hidden");
-    document.getElementById("flashcard-content").classList.add("hidden");
-    document.getElementById("flashcard-viewer").classList.remove("hidden");
+    updateView();
 
-    updateFlashcardViewer();
-
-    showSuccessNotification(`✅ Generated ${state.generatedFlashcards.length} AI-powered flashcards!`);
+    showSuccessNotification(`✅ Added ${data.flashcards.length} AI-powered flashcards!`);
     saveUserData();
   } catch (error) {
     console.error("Flashcard Generation Error:", error);
     alert(`Error generating flashcards: ${error.message}. Please try again.`);
-  }
+  } finally { flashcardsBusy = false; }
 }
 
 // ============================================================
@@ -1231,6 +920,8 @@ function toggleChat() {
   const chatPanel = document.getElementById("chat-panel");
   if (!chatPanel) return;
   chatPanel.classList.toggle("hidden");
+  const overlay = document.getElementById("highlight-overlay");
+  if (overlay) overlay.style.right = !chatPanel.classList.contains("hidden") && window.innerWidth > 900 ? "420px" : "20px";
 }
 
 function addChatMessage(type, content) {
@@ -1263,14 +954,17 @@ async function sendMessage() {
 
   const message = input.value.trim();
 
-  if (message) {
-
+  if (message && !chatBusy) {
+    chatBusy = true;
+    document.getElementById("chat-send").disabled = true;
+    document.getElementById("chat-status").textContent = "Thinking…";
+    const history = state.chatMessages.filter(item => !item.content.startsWith("Sorry,")).slice(-10).map(item => ({ ...item, content: item.content.slice(0, 8000) }));
     addChatMessage("user", message);
     input.value = "";
 
     try {
       const systemPrompt = "You are a helpful AI study assistant for history students. Provide clear, educational responses.";
-      const response = await callAI(message, systemPrompt);
+      const response = await callAI(message, systemPrompt, history);
 
 
       addChatMessage("bot", response);
@@ -1278,6 +972,8 @@ async function sendMessage() {
 
       addChatMessage("bot", `Sorry, I encountered an error: ${error.message}. Please try again.`);
       console.error("AI Chat Error:", error);
+    } finally {
+      chatBusy = false; document.getElementById("chat-send").disabled = false; document.getElementById("chat-status").textContent = "";
     }
   }
 }
@@ -1289,6 +985,7 @@ function handleChatKeypress(event) {
 }
 
 function clearChat() {
+  if (chatBusy) { alert("Wait for the current reply before clearing chat."); return; }
   const chatMessages = document.getElementById("chat-messages");
   if (!chatMessages) return;
 
@@ -1326,7 +1023,8 @@ function handleTextSelection(e) {
 
     if (selectedText.length > 0) {
       const range = selection.getRangeAt(0);
-      const container = range.commonAncestorContainer.parentElement;
+      const container = range.commonAncestorContainer.nodeType === 1 ? range.commonAncestorContainer : range.commonAncestorContainer.parentElement;
+      if (!container) return;
 
       const isPdfSelection = container.closest("#pdf-viewer") !== null;
       const isChatSelection = container.closest("#chat-messages") !== null;
@@ -1334,7 +1032,7 @@ function handleTextSelection(e) {
 
       if (isPdfSelection || isChatSelection || isCheatsheetSelection) {
         state.selectedText = selectedText;
-        showSelectionPopup(e.clientX, e.clientY);
+        showSelectionPopup(e.changedTouches?.[0]?.clientX ?? e.clientX ?? 20, e.changedTouches?.[0]?.clientY ?? e.clientY ?? 80);
       } else {
         hideSelectionPopup();
       }
@@ -1421,7 +1119,9 @@ function closeCheatsheetSelectModal() {
 }
 
 function createNewCheatsheetFromSelection() {
+  const selectedText = state.selectedText;
   closeCheatsheetSelectModal();
+  state.selectedText = selectedText;
   const modal = document.getElementById("cheatsheet-modal");
   if (modal) modal.classList.remove("hidden");
 }
@@ -1429,7 +1129,7 @@ function createNewCheatsheetFromSelection() {
 function addTextToCheatsheet(cheatsheetName) {
   const cheatsheet = state.cheatsheets.find(c => c.name === cheatsheetName);
 
-  if (cheatsheet) {
+  if (cheatsheet && state.selectedText.trim()) {
     if (!cheatsheet.items) {
       cheatsheet.items = [];
     }
@@ -1442,6 +1142,7 @@ function addTextToCheatsheet(cheatsheetName) {
 
     showSuccessNotification(`Added to "${cheatsheetName}"`);
     closeCheatsheetSelectModal();
+    if (state.currentCheatsheet === cheatsheet) updateCheatsheetViewer();
     saveUserData();
   }
 }
@@ -1468,6 +1169,7 @@ function createCheatsheet() {
   if (!nameInput) return;
   const name = nameInput.value.trim();
 
+  if (name.length > 120 || state.cheatsheets.some(sheet => sheet.name.toLowerCase() === name.toLowerCase())) { alert('Use a unique name of at most 120 characters.'); return; }
   if (name) {
     const newCheatsheet = {
       name: name,
@@ -1491,6 +1193,8 @@ function createCheatsheet() {
 
     updateCheatsheetsDropdown();
     closeCheatsheetModal();
+    viewCheatsheet(name);
+    renderProgress();
     saveUserData();
   }
 }
@@ -1581,6 +1285,7 @@ function updateCheatsheetViewer() {
           </div>
           <div class="cheatsheet-item-content">${escapeHTML(item.text)}</div>
           <div class="cheatsheet-item-actions">
+            <button class="item-action-btn" onclick="editNote(${index})">Edit</button>
             <button class="item-action-btn" onclick="deleteCheatsheetItem(${index})">
               <i class="fas fa-trash"></i>
               Delete
@@ -1693,7 +1398,7 @@ async function exportCheatsheetAsDocx() {
     link.href = URL.createObjectURL(blob);
     link.download = `${cheatsheet.name.replace(/\s+/g, "_")}.docx`;
     link.click();
-    URL.revokeObjectURL(link.href);
+    setTimeout(() => URL.revokeObjectURL(link.href), 1000);
     
     showSuccessNotification("✅ Word document exported successfully!");
   } catch (err) {
@@ -1755,13 +1460,12 @@ async function exportCheatsheetAsPDF() {
       pdf.setFontSize(11);
       const contentLines = pdf.splitTextToSize(item.text, maxWidth);
       
-      if (y + (contentLines.length * 14) > pageHeight - 60) {
-        pdf.addPage();
-        y = 60;
+      for (const line of contentLines) {
+        if (y > pageHeight - 60) { pdf.addPage(); y = 60; }
+        pdf.text(line, margin, y); y += 14;
       }
-      
-      pdf.text(contentLines, margin, y);
-      y += (contentLines.length * 14) + 10;
+      y += 10;
+      if (y > pageHeight - 60) { pdf.addPage(); y = 60; }
 
       pdf.setFont("helvetica", "italic");
       pdf.setFontSize(9);

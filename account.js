@@ -16,7 +16,7 @@ async function apiRequest(path, options = {}) {
     headers: { 'Content-Type': 'application/json',
       ...(currentUser && !path.startsWith('/api/auth/') ? { 'X-Account-Id': String(currentUser.id) } : {}), ...options.headers }
   });
-  const data = await response.json();
+  const data = await response.json().catch(() => { throw new Error('The server returned an invalid response. Please try again.'); });
   if (!response.ok) throw Object.assign(new Error(data.error || 'Request failed.'), { status: response.status });
   return data;
   } finally { if (isProvider) providerRequests--; }
@@ -28,7 +28,7 @@ function escapeHTML(value) {
 
 function studySnapshot() {
   return { cheatsheets: state.cheatsheets, chatMessages: state.chatMessages,
-    generatedFlashcards: state.generatedFlashcards, progress: { currentFlashcard: state.currentFlashcard } };
+    generatedFlashcards: state.generatedFlashcards, progress: { currentFlashcard: state.currentFlashcard, completedQuestions: state.completedQuestions || [] } };
 }
 
 function setSyncStatus(message, failed = false) {
@@ -39,6 +39,7 @@ function setSyncStatus(message, failed = false) {
 
 function saveUserData() {
   if (!accountReady) return saveQueue;
+  if (typeof renderProgress === 'function') renderProgress();
   const snapshot = JSON.stringify(studySnapshot());
   unsavedData = snapshot;
   setSyncStatus('Saving…');
@@ -69,6 +70,7 @@ async function loadUserData() {
   state.chatMessages = data.chatMessages.length ? data.chatMessages : [{ type: 'bot', content: "Hello! I'm your AI study assistant. How can I help you today?" }];
   state.generatedFlashcards = data.generatedFlashcards;
   state.currentFlashcard = Math.min(data.progress?.currentFlashcard || 0, Math.max(0, state.generatedFlashcards.length - 1));
+  state.completedQuestions = data.progress?.completedQuestions || [];
   updateCheatsheetsDropdown(); updateChatMessages();
   accountReady = true;
   setSyncStatus('Saved');
@@ -88,6 +90,8 @@ async function finishSignIn(user) {
   document.getElementById('auth-panel').hidden = true;
   document.getElementById('app-content').inert = false;
   document.getElementById('auth-password').value = '';
+  renderProgress();
+  refreshServices().catch(error => { document.getElementById('service-status').textContent = `Service status unavailable: ${error.message}`; });
   // Older anonymous data is imported only when the user explicitly requests it.
   try { document.getElementById('import-local').hidden = !localStorage.getItem('smart_cram_user_data'); } catch {}
 }
@@ -135,13 +139,9 @@ async function importLocalData() {
     if (!raw) return;
     const legacy = JSON.parse(raw);
     if (!['cheatsheets', 'chatMessages', 'generatedFlashcards'].every(key => Array.isArray(legacy[key]))) throw new Error('The old data is not in a supported format.');
-    state.cheatsheets.push(...legacy.cheatsheets);
-    state.chatMessages.push(...legacy.chatMessages);
-    state.generatedFlashcards.push(...legacy.generatedFlashcards);
-    updateCheatsheetsDropdown(); updateChatMessages();
+    await mergeStudyData(legacy);
     document.getElementById('import-local').hidden = true;
-    await saveUserData();
-    if (!unsavedData) localStorage.removeItem('smart_cram_user_data');
+    localStorage.removeItem('smart_cram_user_data');
   } catch (error) { alert(`Import failed: ${error.message}`); }
 }
 
