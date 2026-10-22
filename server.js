@@ -2,6 +2,7 @@ import { createServer } from 'node:http';
 import { DatabaseSync } from 'node:sqlite';
 import { randomBytes, createHash, scrypt, timingSafeEqual } from 'node:crypto';
 import { promisify } from 'node:util';
+import { setTimeout as delay } from 'node:timers/promises';
 import { mkdirSync, readFileSync, existsSync, createReadStream, statSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -128,10 +129,20 @@ export function createApp({ databasePath = process.env.DATABASE_PATH || resolve(
   }
   async function upstream(url, options, service) {
     let response;
-    // Never forward provider credentials to a redirect destination.
-    try { response = await fetchImpl(url, { ...options, redirect: 'error', signal: AbortSignal.timeout(30000) }); }
-    catch { throw fail(502, `${service} is unavailable or timed out. Please try again.`); }
+    // Retry only explicit transient Gemini responses, once. Authentication, quota,
+    // redirects and ambiguous network failures must not trigger duplicate requests.
+    const signal = AbortSignal.timeout(30000);
+    for (let attempt = 0; attempt < 2; attempt++) {
+      // Never forward provider credentials to a redirect destination.
+      try { response = await fetchImpl(url, { ...options, redirect: 'error', signal }); }
+      catch { throw fail(502, `${service} is unavailable or timed out. Please try again.`); }
+      if (service !== 'Gemini' || ![500, 502, 503, 504].includes(response.status) || attempt === 1) break;
+      await response.body?.cancel();
+      try { await delay(1000, undefined, { signal }); }
+      catch { throw fail(502, `${service} is unavailable or timed out. Please try again.`); }
+    }
     if (!response.ok) {
+      if (service === 'Gemini' && response.status === 503) throw fail(503, 'Gemini is temporarily busy. Please try again in a minute.');
       if ([400, 401, 403, 404].includes(response.status)) throw fail(502, `${service} rejected the request. Check the server API key, model, and API access.`);
       if (response.status === 429) throw fail(503, `${service} quota exceeded. Please try again later.`);
       throw fail(502, `${service} is unavailable. Please try again.`);

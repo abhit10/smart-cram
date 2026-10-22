@@ -273,3 +273,23 @@ test('shared library serves only installed allowlisted sections to signed-in use
   const second=await request('/api/auth/register',{method:'POST',body:{...credentials,email:'reader2@example.com'}});
   assert.equal((await request('/api/library/history/jess301',{cookie:second.cookie})).text,pdf.text);
 });
+
+test('Gemini retries a transient failure once and returns the successful answer', async t => {
+  let calls=0;const signals=[];
+  const {request,close}=await start({geminiKey:'test-key',fetchImpl:async(_url,options)=>{
+    signals.push(options.signal);assert.equal(options.redirect,'error');
+    return ++calls===1 ? {ok:false,status:503} : {ok:true,status:200,json:async()=>({candidates:[{content:{parts:[{text:'Recovered answer'}]}}]})};
+  }});t.after(close);
+  const {cookie}=await request('/api/auth/register',{method:'POST',body:credentials});
+  const response=await request('/api/chat',{method:'POST',cookie,body:{message:'Hello'}});
+  assert.equal(response.status,200);assert.equal(response.body.reply,'Recovered answer');
+  assert.equal(calls,2);assert.equal(signals[0],signals[1],'Retries share a bounded overall timeout');
+});
+
+test('persistent Gemini overload stops after two attempts with an actionable error', async t => {
+  let calls=0;
+  const {request,close}=await start({geminiKey:'test-key',fetchImpl:async()=>{calls++;return {ok:false,status:503};}});t.after(close);
+  const {cookie}=await request('/api/auth/register',{method:'POST',body:credentials});
+  const response=await request('/api/chat',{method:'POST',cookie,body:{message:'Hello'}});
+  assert.equal(response.status,503);assert.match(response.body.error,/temporarily busy/);assert.equal(calls,2);
+});
