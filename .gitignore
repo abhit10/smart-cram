@@ -28,3 +28,6 @@ desktop.ini
 # Logs
 *.log
 npm-debug.log*
+
+# Shared textbook files are installed on the server separately.
+ncert 10 books/

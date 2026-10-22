@@ -91,6 +91,7 @@ async function finishSignIn(user) {
   document.getElementById('app-content').inert = false;
   document.getElementById('auth-password').value = '';
   renderProgress();
+  loadLibrary().catch(error => { document.getElementById('book-library').textContent = `Library unavailable: ${error.message}`; });
   refreshServices().catch(error => { document.getElementById('service-status').textContent = `Service status unavailable: ${error.message}`; });
   // Older anonymous data is imported only when the user explicitly requests it.
   try { document.getElementById('import-local').hidden = !localStorage.getItem('smart_cram_user_data'); } catch {}

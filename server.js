@@ -2,11 +2,12 @@ import { createServer } from 'node:http';
 import { DatabaseSync } from 'node:sqlite';
 import { randomBytes, createHash, scrypt, timingSafeEqual } from 'node:crypto';
 import { promisify } from 'node:util';
-import { mkdirSync, readFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, existsSync, createReadStream, statSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = dirname(fileURLToPath(import.meta.url));
+const libraryCatalog = JSON.parse(readFileSync(resolve(root, 'library.json'), 'utf8'));
 const deriveKey = promisify(scrypt);
 const hash = value => createHash('sha256').update(value).digest('hex');
 const fail = (status, message) => Object.assign(new Error(message), { status });
@@ -73,6 +74,7 @@ export function createApp({ databasePath = process.env.DATABASE_PATH || resolve(
   origin = process.env.APP_ORIGIN || 'http://localhost:3000',
   secureCookie = process.env.COOKIE_SECURE === 'true',
   geminiKey = process.env.GEMINI_API_KEY || '', youtubeKey = process.env.YOUTUBE_API_KEY || '',
+  booksPath = process.env.BOOKS_PATH || resolve(root, 'ncert 10 books'),
   geminiModel = process.env.GEMINI_MODEL || 'gemini-3.8-flash', fetchImpl = fetch } = {}) {
   if (databasePath !== ':memory:') mkdirSync(dirname(resolve(databasePath)), { recursive: true });
   const db = new DatabaseSync(databasePath);
@@ -226,8 +228,28 @@ export function createApp({ databasePath = process.env.DATABASE_PATH || resolve(
         throw fail(409, 'The signed-in account changed in another tab. Download a backup of unsaved edits and reload.');
       }
       if (path === '/api/auth/me' && req.method === 'GET') return json(200, { user });
+      if (path === '/api/library' && req.method === 'GET') {
+        return json(200, { books: libraryCatalog.map(book => ({ ...book,
+          sections: book.sections.filter(section => existsSync(resolve(booksPath, section.file)))
+            .map(({ file, ...section }) => section)
+        })).filter(book => book.sections.length) });
+      }
+      if (path.startsWith('/api/library/') && ['GET', 'HEAD'].includes(req.method)) {
+        const parts = path.split('/');
+        const book = libraryCatalog.find(book => book.id === parts[3]);
+        const section = parts.length === 5 && book?.sections.find(section => section.id === parts[4]);
+        if (!section) throw fail(404, 'Textbook section not found.');
+        const file = resolve(booksPath, section.file);
+        if (!existsSync(file)) throw fail(404, 'This textbook section is not installed on the server.');
+        res.writeHead(200, { 'Content-Type': 'application/pdf', 'Content-Length': statSync(file).size, 'Cache-Control': 'private, no-store' });
+        if (req.method === 'HEAD') return res.end();
+        const stream = createReadStream(file);
+        stream.on('error', () => res.destroy());
+        res.on('close', () => stream.destroy());
+        stream.pipe(res); return;
+      }
       if (path === '/api/services' && req.method === 'GET') {
-        let textbook = !!db.prepare('SELECT 1 FROM textbooks WHERE user_id=?').get(user.id);
+        let textbook = libraryCatalog.some(book => book.sections.some(section => existsSync(resolve(booksPath, section.file)))) || !!db.prepare('SELECT 1 FROM textbooks WHERE user_id=?').get(user.id);
         if (!textbook) { try { readFileSync(resolve(root, 'NCERT-Class-10-History.pdf')); textbook = true; } catch {} }
         return json(200, { ai: !!geminiKey, videos: !!youtubeKey, textbook });
       }

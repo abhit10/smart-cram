@@ -240,7 +240,7 @@ function highlightTextInPDFViewer(relevantText, questionText, chapter) {
 
   const chapterInfo = chapter ? `
     <div style="background: rgba(255,255,255,0.15); padding: 0.5rem; border-radius: 0.5rem; margin-bottom: 0.75rem;">
-      <strong style="font-size: 0.8rem;">📖 ${chapter.name}</strong>
+      <strong style="font-size: 0.8rem;">📖 ${escapeHTML(chapter.name)}</strong>
       <div style="font-size: 0.75rem; opacity: 0.9; margin-top: 0.25rem;">Pages ${chapter.pageStart}-${chapter.pageEnd}</div>
     </div>
   ` : '';
@@ -450,6 +450,7 @@ function navigateHome() {
 
 function selectSubject(subjectId) {
   state.selectedSubject = subjectId;
+  selectDefaultSection(subjectId);
   state.selectedPaper = null;
   state.currentView = "study";
   state.selectedQuestion = null;
@@ -581,7 +582,7 @@ function updateView() {
 function updateNavigation() {
   const papersBtn = document.getElementById("papers-btn");
   if (papersBtn) {
-    papersBtn.disabled = !state.selectedSubject;
+    papersBtn.disabled = !state.selectedSubject || getAvailablePapers(state.selectedSubject).length === 0;
   }
 }
 
@@ -599,7 +600,7 @@ function updateStudyView() {
     studyTitle.textContent = titleText;
 
     document.getElementById("pdf-title").textContent = `${subject.name} Textbook`;
-    const pdfPath = CONFIG.textbookPaths[state.selectedSubject];
+    renderLibraryNavigation();
 
     if (pdfViewer) renderTextbookPage();
 
@@ -669,7 +670,7 @@ function createQuestionCard(question, index) {
       <button onclick="event.stopPropagation(); toggleQuestionStudied('${qId}')">${studied ? '✓ Studied' : 'Mark studied'}</button>
       <button class="highlight-btn" onclick="event.stopPropagation(); highlightInPDF('${qId}')">
         <i class="fas fa-highlighter"></i>
-        Find in textbook
+        Find in this section
       </button>
     </div>
     ${state.selectedQuestion === qId ? `
@@ -1137,7 +1138,7 @@ function addTextToCheatsheet(cheatsheetName) {
     cheatsheet.items.push({
       text: state.selectedText,
       addedAt: new Date().toISOString(),
-      source: state.currentView === "study" ? "PDF" : state.currentView === "cheatsheet-viewer" ? "Cheatsheet" : "Chat"
+      source: state.currentView === "study" ? currentTextbookSource() : state.currentView === "cheatsheet-viewer" ? "Cheatsheet" : "Chat"
     });
 
     showSuccessNotification(`Added to "${cheatsheetName}"`);
@@ -1182,7 +1183,7 @@ function createCheatsheet() {
       newCheatsheet.items.push({
         text: state.selectedText,
         addedAt: new Date().toISOString(),
-        source: state.currentView === "study" ? "PDF" : "Chat"
+        source: state.currentView === "study" ? currentTextbookSource() : "Chat"
       });
       showSuccessNotification(`Created "${name}" and added text`);
       state.selectedText = "";

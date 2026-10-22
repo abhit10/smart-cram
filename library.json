@@ -1,0 +1,626 @@
+[
+  {
+    "id": "history",
+    "title": "India and the Contemporary World II",
+    "subject": "History",
+    "grade": "Class 10",
+    "sections": [
+      {
+        "id": "jess3ps",
+        "title": "Front matter and contents",
+        "group": "Front matter",
+        "file": "jess3dd/jess3ps.pdf",
+        "pages": 12
+      },
+      {
+        "id": "jess301",
+        "title": "The Rise of Nationalism in Europe",
+        "group": "Chapters",
+        "file": "jess3dd/jess301.pdf",
+        "pages": 28
+      },
+      {
+        "id": "jess302",
+        "title": "Nationalism in India",
+        "group": "Chapters",
+        "file": "jess3dd/jess302.pdf",
+        "pages": 22
+      },
+      {
+        "id": "jess303",
+        "title": "The Making of a Global World",
+        "group": "Chapters",
+        "file": "jess3dd/jess303.pdf",
+        "pages": 28
+      },
+      {
+        "id": "jess304",
+        "title": "The Age of Industrialisation",
+        "group": "Chapters",
+        "file": "jess3dd/jess304.pdf",
+        "pages": 24
+      },
+      {
+        "id": "jess305",
+        "title": "Print Culture and the Modern World",
+        "group": "Chapters",
+        "file": "jess3dd/jess305.pdf",
+        "pages": 26
+      }
+    ]
+  },
+  {
+    "id": "geography",
+    "title": "Contemporary India II",
+    "subject": "Geography",
+    "grade": "Class 10",
+    "sections": [
+      {
+        "id": "jess1ps",
+        "title": "Front matter and contents",
+        "group": "Front matter",
+        "file": "jess1dd/jess1ps.pdf",
+        "pages": 12
+      },
+      {
+        "id": "jess101",
+        "title": "Resources and Development",
+        "group": "Chapters",
+        "file": "jess1dd/jess101.pdf",
+        "pages": 12
+      },
+      {
+        "id": "jess102",
+        "title": "Forest and Wildlife Resources",
+        "group": "Chapters",
+        "file": "jess1dd/jess102.pdf",
+        "pages": 6
+      },
+      {
+        "id": "jess103",
+        "title": "Water Resources",
+        "group": "Chapters",
+        "file": "jess1dd/jess103.pdf",
+        "pages": 11
+      },
+      {
+        "id": "jess104",
+        "title": "Agriculture",
+        "group": "Chapters",
+        "file": "jess1dd/jess104.pdf",
+        "pages": 12
+      },
+      {
+        "id": "jess105",
+        "title": "Minerals and Energy Resources",
+        "group": "Chapters",
+        "file": "jess1dd/jess105.pdf",
+        "pages": 16
+      },
+      {
+        "id": "jess106",
+        "title": "Manufacturing Industries",
+        "group": "Chapters",
+        "file": "jess1dd/jess106.pdf",
+        "pages": 13
+      },
+      {
+        "id": "jess107",
+        "title": "Lifelines of National Economy",
+        "group": "Chapters",
+        "file": "jess1dd/jess107.pdf",
+        "pages": 13
+      },
+      {
+        "id": "jess1a1",
+        "title": "Appendices and glossary",
+        "group": "Reference",
+        "file": "jess1dd/jess1a1.pdf",
+        "pages": 5
+      }
+    ]
+  },
+  {
+    "id": "economics",
+    "title": "Understanding Economic Development",
+    "subject": "Economics",
+    "grade": "Class 10",
+    "sections": [
+      {
+        "id": "jess2ps",
+        "title": "Front matter and contents",
+        "group": "Front matter",
+        "file": "jess2dd/jess2ps.pdf",
+        "pages": 13
+      },
+      {
+        "id": "jess201",
+        "title": "Development",
+        "group": "Chapters",
+        "file": "jess2dd/jess201.pdf",
+        "pages": 16
+      },
+      {
+        "id": "jess202",
+        "title": "Sectors of the Indian Economy",
+        "group": "Chapters",
+        "file": "jess2dd/jess202.pdf",
+        "pages": 20
+      },
+      {
+        "id": "jess203",
+        "title": "Money and Credit",
+        "group": "Chapters",
+        "file": "jess2dd/jess203.pdf",
+        "pages": 16
+      },
+      {
+        "id": "jess204",
+        "title": "Globalisation and the Indian Economy",
+        "group": "Chapters",
+        "file": "jess2dd/jess204.pdf",
+        "pages": 20
+      },
+      {
+        "id": "jess205",
+        "title": "Consumer Rights",
+        "group": "Chapters",
+        "file": "jess2dd/jess205.pdf",
+        "pages": 19
+      }
+    ]
+  },
+  {
+    "id": "politics",
+    "title": "Democratic Politics II",
+    "subject": "Political Science",
+    "grade": "Class 10",
+    "sections": [
+      {
+        "id": "jess4ps",
+        "title": "Front matter and contents",
+        "group": "Front matter",
+        "file": "jess4dd/jess4ps.pdf",
+        "pages": 14
+      },
+      {
+        "id": "jess401",
+        "title": "Power-sharing",
+        "group": "Chapters",
+        "file": "jess4dd/jess401.pdf",
+        "pages": 12
+      },
+      {
+        "id": "jess402",
+        "title": "Federalism",
+        "group": "Chapters",
+        "file": "jess4dd/jess402.pdf",
+        "pages": 16
+      },
+      {
+        "id": "jess403",
+        "title": "Gender, Religion and Caste",
+        "group": "Chapters",
+        "file": "jess4dd/jess403.pdf",
+        "pages": 17
+      },
+      {
+        "id": "jess404",
+        "title": "Political Parties",
+        "group": "Chapters",
+        "file": "jess4dd/jess404.pdf",
+        "pages": 17
+      },
+      {
+        "id": "jess405",
+        "title": "Outcomes of Democracy",
+        "group": "Chapters",
+        "file": "jess4dd/jess405.pdf",
+        "pages": 12
+      }
+    ]
+  },
+  {
+    "id": "mathematics",
+    "title": "Mathematics",
+    "subject": "Mathematics",
+    "grade": "Class 10",
+    "sections": [
+      {
+        "id": "jemh1ps",
+        "title": "Front matter and contents",
+        "group": "Front matter",
+        "file": "jemh1dd/jemh1ps.pdf",
+        "pages": 14
+      },
+      {
+        "id": "jemh101",
+        "title": "Real Numbers",
+        "group": "Chapters",
+        "file": "jemh1dd/jemh101.pdf",
+        "pages": 9
+      },
+      {
+        "id": "jemh102",
+        "title": "Polynomials",
+        "group": "Chapters",
+        "file": "jemh1dd/jemh102.pdf",
+        "pages": 14
+      },
+      {
+        "id": "jemh103",
+        "title": "Pair of Linear Equations in Two Variables",
+        "group": "Chapters",
+        "file": "jemh1dd/jemh103.pdf",
+        "pages": 14
+      },
+      {
+        "id": "jemh104",
+        "title": "Quadratic Equations",
+        "group": "Chapters",
+        "file": "jemh1dd/jemh104.pdf",
+        "pages": 11
+      },
+      {
+        "id": "jemh105",
+        "title": "Arithmetic Progressions",
+        "group": "Chapters",
+        "file": "jemh1dd/jemh105.pdf",
+        "pages": 24
+      },
+      {
+        "id": "jemh106",
+        "title": "Triangles",
+        "group": "Chapters",
+        "file": "jemh1dd/jemh106.pdf",
+        "pages": 26
+      },
+      {
+        "id": "jemh107",
+        "title": "Coordinate Geometry",
+        "group": "Chapters",
+        "file": "jemh1dd/jemh107.pdf",
+        "pages": 14
+      },
+      {
+        "id": "jemh108",
+        "title": "Introduction to Trigonometry",
+        "group": "Chapters",
+        "file": "jemh1dd/jemh108.pdf",
+        "pages": 20
+      },
+      {
+        "id": "jemh109",
+        "title": "Some Applications of Trigonometry",
+        "group": "Chapters",
+        "file": "jemh1dd/jemh109.pdf",
+        "pages": 11
+      },
+      {
+        "id": "jemh110",
+        "title": "Circles",
+        "group": "Chapters",
+        "file": "jemh1dd/jemh110.pdf",
+        "pages": 10
+      },
+      {
+        "id": "jemh111",
+        "title": "Areas Related to Circles",
+        "group": "Chapters",
+        "file": "jemh1dd/jemh111.pdf",
+        "pages": 7
+      },
+      {
+        "id": "jemh112",
+        "title": "Surface Areas and Volumes",
+        "group": "Chapters",
+        "file": "jemh1dd/jemh112.pdf",
+        "pages": 10
+      },
+      {
+        "id": "jemh113",
+        "title": "Statistics",
+        "group": "Chapters",
+        "file": "jemh1dd/jemh113.pdf",
+        "pages": 31
+      },
+      {
+        "id": "jemh114",
+        "title": "Probability",
+        "group": "Chapters",
+        "file": "jemh1dd/jemh114.pdf",
+        "pages": 16
+      },
+      {
+        "id": "jemh1a1",
+        "title": "Proofs in Mathematics",
+        "group": "Reference",
+        "file": "jemh1dd/jemh1a1.pdf",
+        "pages": 21
+      },
+      {
+        "id": "jemh1a2",
+        "title": "Mathematical Modelling",
+        "group": "Reference",
+        "file": "jemh1dd/jemh1a2.pdf",
+        "pages": 11
+      },
+      {
+        "id": "jemh1an",
+        "title": "Answers and hints",
+        "group": "Reference",
+        "file": "jemh1dd/jemh1an.pdf",
+        "pages": 13
+      }
+    ]
+  },
+  {
+    "id": "science",
+    "title": "Science",
+    "subject": "Science",
+    "grade": "Class 10",
+    "sections": [
+      {
+        "id": "jesc1ps",
+        "title": "Front matter and contents",
+        "group": "Front matter",
+        "file": "jesc1dd/jesc1ps.pdf",
+        "pages": 12
+      },
+      {
+        "id": "jesc101",
+        "title": "Chemical Reactions and Equations",
+        "group": "Chapters",
+        "file": "jesc1dd/jesc101.pdf",
+        "pages": 16
+      },
+      {
+        "id": "jesc102",
+        "title": "Acids, Bases and Salts",
+        "group": "Chapters",
+        "file": "jesc1dd/jesc102.pdf",
+        "pages": 20
+      },
+      {
+        "id": "jesc103",
+        "title": "Metals and Non-metals",
+        "group": "Chapters",
+        "file": "jesc1dd/jesc103.pdf",
+        "pages": 21
+      },
+      {
+        "id": "jesc104",
+        "title": "Carbon and its Compounds",
+        "group": "Chapters",
+        "file": "jesc1dd/jesc104.pdf",
+        "pages": 21
+      },
+      {
+        "id": "jesc105",
+        "title": "Life Processes",
+        "group": "Chapters",
+        "file": "jesc1dd/jesc105.pdf",
+        "pages": 21
+      },
+      {
+        "id": "jesc106",
+        "title": "Control and Coordination",
+        "group": "Chapters",
+        "file": "jesc1dd/jesc106.pdf",
+        "pages": 13
+      },
+      {
+        "id": "jesc107",
+        "title": "How do Organisms Reproduce?",
+        "group": "Chapters",
+        "file": "jesc1dd/jesc107.pdf",
+        "pages": 15
+      },
+      {
+        "id": "jesc108",
+        "title": "Heredity",
+        "group": "Chapters",
+        "file": "jesc1dd/jesc108.pdf",
+        "pages": 6
+      },
+      {
+        "id": "jesc109",
+        "title": "Light - Reflection and Refraction",
+        "group": "Chapters",
+        "file": "jesc1dd/jesc109.pdf",
+        "pages": 27
+      },
+      {
+        "id": "jesc110",
+        "title": "The Human Eye and the Colourful World",
+        "group": "Chapters",
+        "file": "jesc1dd/jesc110.pdf",
+        "pages": 10
+      },
+      {
+        "id": "jesc111",
+        "title": "Electricity",
+        "group": "Chapters",
+        "file": "jesc1dd/jesc111.pdf",
+        "pages": 24
+      },
+      {
+        "id": "jesc112",
+        "title": "Magnetic Effects of Electric Current",
+        "group": "Chapters",
+        "file": "jesc1dd/jesc112.pdf",
+        "pages": 13
+      },
+      {
+        "id": "jesc113",
+        "title": "Our Environment",
+        "group": "Chapters",
+        "file": "jesc1dd/jesc113.pdf",
+        "pages": 10
+      },
+      {
+        "id": "jesc1an",
+        "title": "Answers",
+        "group": "Reference",
+        "file": "jesc1dd/jesc1an.pdf",
+        "pages": 3
+      }
+    ]
+  },
+  {
+    "id": "english-first-flight",
+    "title": "First Flight",
+    "subject": "English",
+    "grade": "Class 10",
+    "sections": [
+      {
+        "id": "jeff1ps",
+        "title": "Front matter and contents",
+        "group": "Front matter",
+        "file": "jeff1dd/jeff1ps.pdf",
+        "pages": 12
+      },
+      {
+        "id": "jeff101",
+        "title": "A Letter to God / Dust of Snow / Fire and Ice",
+        "group": "Chapters",
+        "file": "jeff1dd/jeff101.pdf",
+        "pages": 15
+      },
+      {
+        "id": "jeff102",
+        "title": "Nelson Mandela: Long Walk to Freedom / A Tiger in the Zoo",
+        "group": "Chapters",
+        "file": "jeff1dd/jeff102.pdf",
+        "pages": 16
+      },
+      {
+        "id": "jeff103",
+        "title": "Two Stories about Flying / How to Tell Wild Animals / The Ball Poem",
+        "group": "Chapters",
+        "file": "jeff1dd/jeff103.pdf",
+        "pages": 16
+      },
+      {
+        "id": "jeff104",
+        "title": "From the Diary of Anne Frank / Amanda!",
+        "group": "Chapters",
+        "file": "jeff1dd/jeff104.pdf",
+        "pages": 15
+      },
+      {
+        "id": "jeff105",
+        "title": "Glimpses of India / The Trees",
+        "group": "Chapters",
+        "file": "jeff1dd/jeff105.pdf",
+        "pages": 17
+      },
+      {
+        "id": "jeff106",
+        "title": "Mijbil the Otter / Fog",
+        "group": "Chapters",
+        "file": "jeff1dd/jeff106.pdf",
+        "pages": 14
+      },
+      {
+        "id": "jeff107",
+        "title": "Madam Rides the Bus / The Tale of Custard the Dragon",
+        "group": "Chapters",
+        "file": "jeff1dd/jeff107.pdf",
+        "pages": 17
+      },
+      {
+        "id": "jeff108",
+        "title": "The Sermon at Benares / For Anne Gregory",
+        "group": "Chapters",
+        "file": "jeff1dd/jeff108.pdf",
+        "pages": 9
+      },
+      {
+        "id": "jeff109",
+        "title": "The Proposal",
+        "group": "Chapters",
+        "file": "jeff1dd/jeff109.pdf",
+        "pages": 21
+      }
+    ]
+  },
+  {
+    "id": "english-footprints",
+    "title": "Footprints without Feet",
+    "subject": "English",
+    "grade": "Class 10",
+    "sections": [
+      {
+        "id": "jefp1ps",
+        "title": "Front matter and contents",
+        "group": "Front matter",
+        "file": "jefp1dd/jefp1ps.pdf",
+        "pages": 14
+      },
+      {
+        "id": "jefp101",
+        "title": "A Triumph of Surgery",
+        "group": "Chapters",
+        "file": "jefp1dd/jefp101.pdf",
+        "pages": 7
+      },
+      {
+        "id": "jefp102",
+        "title": "The Thief’s Story",
+        "group": "Chapters",
+        "file": "jefp1dd/jefp102.pdf",
+        "pages": 6
+      },
+      {
+        "id": "jefp103",
+        "title": "The Midnight Visitor",
+        "group": "Chapters",
+        "file": "jefp1dd/jefp103.pdf",
+        "pages": 6
+      },
+      {
+        "id": "jefp104",
+        "title": "A Question of Trust",
+        "group": "Chapters",
+        "file": "jefp1dd/jefp104.pdf",
+        "pages": 6
+      },
+      {
+        "id": "jefp105",
+        "title": "Footprints without Feet",
+        "group": "Chapters",
+        "file": "jefp1dd/jefp105.pdf",
+        "pages": 6
+      },
+      {
+        "id": "jefp106",
+        "title": "The Making of a Scientist",
+        "group": "Chapters",
+        "file": "jefp1dd/jefp106.pdf",
+        "pages": 7
+      },
+      {
+        "id": "jefp107",
+        "title": "The Necklace",
+        "group": "Chapters",
+        "file": "jefp1dd/jefp107.pdf",
+        "pages": 8
+      },
+      {
+        "id": "jefp108",
+        "title": "Bholi",
+        "group": "Chapters",
+        "file": "jefp1dd/jefp108.pdf",
+        "pages": 9
+      },
+      {
+        "id": "jefp109",
+        "title": "The Book That Saved the Earth",
+        "group": "Chapters",
+        "file": "jefp1dd/jefp109.pdf",
+        "pages": 15
+      }
+    ]
+  }
+]

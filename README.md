@@ -22,7 +22,15 @@ A study app for question papers, cheatsheets, AI explanations, flashcards, and e
 
 Use the server URL, rather than opening `index.html` directly or using Live Server. If changing the port or hostname, update `PORT` and `APP_ORIGIN` together and open that exact origin. `HOST` defaults to the local machine only.
 
-The textbook is not included. Select **Subjects → History → Upload textbook PDF** to save a PDF of up to 25 MB privately to your account. Alternatively, place `NCERT-Class-10-History.pdf` in the project folder as a shared default. Question-paper JSON files are included. Only icon fonts, AI requests, and YouTube features need external services; PDF viewing and exports use local libraries.
+## Shared textbook library
+
+The home screen lists eight NCERT Class 10 books with 80 PDF sections, including front matter, chapters, appendices and answers. Book and section titles are defined in `library.json`. The supplied English volumes retain each chapter and its accompanying poems in the same section.
+
+Copy the supplied `ncert 10 books` folder into the server project folder, preserving subfolders (`jess3dd`, `jesc1dd`, etc.), or set `BOOKS_PATH` to its absolute location. Restart the server after changing `.env`. These 223 MB of PDFs are server content and are excluded from Git; install the same folder on a deployment's persistent disk. The application lists only sections whose files are installed. No per-user upload is required to read the shared library, and a fresh clone needs this content folder installed separately.
+
+Choose a book, then use **Chapter or section**, **Previous section**, and **Next section**. PDF page numbers and search refer to the current section. Text selected for notes records the book, section and PDF page. History question papers remain available; other books do not have question papers supplied. Each authenticated user reads the same server files through allowlisted routes; private uploaded PDFs are a separate optional reader with a **Return to shared book** button.
+
+The legacy `NCERT-Class-10-History.pdf` fallback and personal PDF uploads remain supported. Only icon fonts, AI requests, and YouTube features need external services; PDF viewing and exports use local libraries.
 
 ## Study features
 

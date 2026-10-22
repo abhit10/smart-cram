@@ -1,3 +1,78 @@
+let libraryBooks = [];
+let activeLibrarySection = null;
+let textbookKey = '';
+let textbookCleanup = Promise.resolve();
+
+async function loadLibrary() {
+  const data = await apiRequest('/api/library');
+  libraryBooks = data.books;
+  for (const book of libraryBooks) subjects[book.id] = { name: book.subject === 'English' ? `English · ${book.title}` : book.subject, icon: 'book', color: 'history-color' };
+  populateSubjectsDropdown();
+  const container = document.getElementById('book-library');
+  container.replaceChildren();
+  if (!libraryBooks.length) { container.textContent = 'Shared books have not been installed yet. You can upload a personal PDF from Subjects → History.'; return; }
+  for (const book of libraryBooks) {
+    const button = document.createElement('button'); button.className = 'book-card';
+    const subject = document.createElement('span'); subject.className = 'book-subject'; subject.textContent = book.subject;
+    const title = document.createElement('strong'); title.textContent = book.title;
+    const detail = document.createElement('span'); detail.textContent = `${book.sections.length} sections · ${book.sections.reduce((sum, section) => sum + section.pages, 0)} pages`;
+    const action = document.createElement('span'); action.className = 'book-action'; action.textContent = 'Open book →';
+    button.append(subject, title, detail, action); button.onclick = () => selectSubject(book.id); container.append(button);
+  }
+}
+function currentLibraryBook() { return libraryBooks.find(book => book.id === state.selectedSubject); }
+function resetTextbook() {
+  ++renderVersion;
+  const old = textbookDocument;
+  textbookDocument = null; textbookLoad = null; textbookKey = ''; textbookPage = 1;
+  if (old) textbookCleanup = textbookCleanup.then(() => old.loadingTask.destroy()).catch(() => {});
+  document.querySelector('#highlight-overlay')?.remove();
+  state.currentHighlightData = null;
+}
+function selectDefaultSection(subjectId) {
+  const book = libraryBooks.find(book => book.id === subjectId);
+  activeLibrarySection = book?.sections.find(section => section.group === 'Chapters')?.id || book?.sections[0]?.id || null;
+  resetTextbook();
+}
+function renderLibraryNavigation() {
+  const book = currentLibraryBook();
+  const nav = document.getElementById('library-navigation');
+  nav.hidden = !book || !activeLibrarySection;
+  document.getElementById('shared-textbook').hidden = !book || !!activeLibrarySection;
+  if (!book || !activeLibrarySection) { document.getElementById('pdf-title').textContent = 'Personal / legacy textbook'; return; }
+  const select = document.getElementById('library-section'); select.replaceChildren();
+  const groups = new Map();
+  for (const section of book.sections) {
+    if (!groups.has(section.group)) { const group = document.createElement('optgroup'); group.label = section.group; groups.set(section.group, group); select.append(group); }
+    const option = document.createElement('option'); option.value = section.id;
+    const chapterNumber = book.sections.filter(item => item.group === 'Chapters').findIndex(item => item.id === section.id) + 1;
+    option.textContent = `${section.group === 'Chapters' ? `${chapterNumber}. ` : ''}${section.title}`;
+    groups.get(section.group).append(option);
+  }
+  select.value = activeLibrarySection;
+  const index = book.sections.findIndex(section => section.id === activeLibrarySection);
+  const section = book.sections[index];
+  document.getElementById('pdf-title').textContent = section.title;
+  document.getElementById('section-summary').textContent = `Section ${index + 1} of ${book.sections.length} · ${section.pages} pages`;
+  document.getElementById('previous-section').disabled = index === 0;
+  document.getElementById('next-section').disabled = index === book.sections.length - 1;
+  document.getElementById('study-title').textContent = `${book.title}${state.selectedPaper ? ` · ${state.selectedPaper} paper` : ''}`;
+}
+function selectLibrarySection(id) {
+  if (!currentLibraryBook()?.sections.some(section => section.id === id)) return;
+  activeLibrarySection = id; resetTextbook(); renderLibraryNavigation(); renderTextbookPage(1);
+}
+function stepLibrarySection(step) {
+  const book = currentLibraryBook();
+  const next = book?.sections[book.sections.findIndex(section => section.id === activeLibrarySection) + step];
+  if (next) selectLibrarySection(next.id);
+}
+function useSharedTextbook() { selectDefaultSection(state.selectedSubject); renderLibraryNavigation(); renderTextbookPage(1); }
+function currentTextbookSource() {
+  const book = currentLibraryBook(); const section = book?.sections.find(section => section.id === activeLibrarySection);
+  return section ? `${`${book.title}: ${section.title}`.slice(0, 95)} (PDF page ${textbookPage})` : `Personal PDF (page ${textbookPage})`;
+}
+
 // Study controls shared by the textbook, cheatsheets, and progress dashboard.
 let serviceStatus = { ai: false, videos: false, textbook: false };
 let textbookDocument = null;
@@ -12,7 +87,7 @@ let flashcardsBusy = false;
 async function refreshServices() {
   serviceStatus = await apiRequest('/api/services');
   const status = document.getElementById('service-status');
-  status.textContent = [serviceStatus.ai ? 'AI key configured' : 'AI needs a server key', serviceStatus.videos ? 'Video key configured' : 'Videos need a server key', serviceStatus.textbook ? 'Textbook ready' : 'Upload a textbook in History'].join(' · ');
+  status.textContent = [serviceStatus.ai ? 'AI key configured' : 'AI needs a server key', serviceStatus.videos ? 'Video key configured' : 'Videos need a server key', serviceStatus.textbook ? 'Textbook ready' : 'No textbook available'].join(' · ');
 }
 
 function renderProgress() {
@@ -147,15 +222,24 @@ async function loadPDFJS() {
   return pdfLibraryLoad;
 }
 async function getTextbook() {
-  if (textbookDocument) return textbookDocument;
-  if (!textbookLoad) textbookLoad = (async () => {
-    const response = await fetch('/api/textbook', { headers: { 'X-Account-Id': String(currentUser.id) } });
+  const route = activeLibrarySection && currentLibraryBook()
+    ? `/api/library/${encodeURIComponent(state.selectedSubject)}/${encodeURIComponent(activeLibrarySection)}` : '/api/textbook';
+  const key = `${currentUser?.id || ''}:${route}`;
+  if (textbookKey === key && textbookDocument) return textbookDocument;
+  if (textbookKey === key && textbookLoad) return textbookLoad;
+  textbookKey = key;
+  const pending = (async () => {
+    const response = await fetch(route, { headers: { 'X-Account-Id': String(currentUser.id) } });
     if (!response.ok) { const data = await response.json(); throw new Error(data.error); }
     const lib = await loadPDFJS();
-    textbookDocument = await lib.getDocument({ data: new Uint8Array(await response.arrayBuffer()), isEvalSupported: false }).promise;
-    return textbookDocument;
-  })().catch(error => { textbookLoad = null; throw error; });
-  return textbookLoad;
+    await textbookCleanup;
+    const pdf = await lib.getDocument({ data: new Uint8Array(await response.arrayBuffer()), isEvalSupported: false }).promise;
+    if (textbookKey !== key) { await pdf.loadingTask.destroy(); throw new Error('The selected section changed.'); }
+    textbookDocument = pdf;
+    return pdf;
+  })().catch(error => { if (textbookKey === key) textbookLoad = null; throw error; });
+  textbookLoad = pending;
+  return pending;
 }
 async function renderTextbookPage(pageNumber = textbookPage, highlight = '') {
   const version = ++renderVersion;
@@ -202,8 +286,9 @@ async function uploadTextbook(input) {
     finally { await candidate.destroy(); }
     await apiRequest('/api/textbook', { method: 'PUT', headers: { 'Content-Type': 'application/pdf' }, body: file });
     ++renderVersion;
-    if (textbookDocument) await textbookDocument.destroy();
+    if (textbookDocument) await textbookDocument.loadingTask.destroy();
     textbookDocument = null; textbookLoad = null; textbookPage = 1;
+    activeLibrarySection = null; textbookKey = ''; renderLibraryNavigation();
     await refreshServices(); await renderTextbookPage(1);
   } catch (error) { alert(`Textbook upload failed: ${error.message}`); }
   finally { input.value = ''; }
@@ -226,13 +311,15 @@ async function searchTextbook(query) {
 }
 async function findInTextbook(query = document.getElementById('textbook-search').value.trim()) {
   if (!query) return;
+  const searchVersion = renderVersion;
   const button = document.getElementById('textbook-find'); button.disabled = true;
   try {
     const match = await searchTextbook(query);
+    if (searchVersion !== renderVersion) return;
     if (!match) { showSuccessNotification('No matching text found. Try different keywords or a searchable PDF.'); return; }
     await renderTextbookPage(match.page, match.word);
     const start = Math.max(0, match.text.toLowerCase().indexOf(match.word) - 150);
-    highlightTextInPDFViewer(match.text.slice(start, start + 1500), query, { name: 'Textbook keyword match', pageStart: match.page, pageEnd: match.page });
+    highlightTextInPDFViewer(match.text.slice(start, start + 1500), query, { name: currentTextbookSource(), pageStart: match.page, pageEnd: match.page });
   } catch (error) { showSuccessNotification(error.message); }
   finally { button.disabled = false; }
 }

@@ -247,3 +247,29 @@ test('chat carries conversation context and flashcards accept structured respons
   output = '[{"question":"","answer":42}]';
   assert.equal((await request('/api/flashcards/generate', { method: 'POST', cookie, body: { content: 'Notes' } })).status, 502);
 });
+
+test('shared library serves only installed allowlisted sections to signed-in users', async t => {
+  const { mkdirSync, writeFileSync } = await import('node:fs');
+  const dir = mkdtempSync(join(tmpdir(), 'smart-cram-library-'));
+  t.after(() => rmSync(dir, {recursive:true,force:true}));
+  mkdirSync(join(dir,'jess3dd'));
+  writeFileSync(join(dir,'jess3dd','jess301.pdf'),'%PDF-1.4\nTest shared textbook');
+  const {request,close}=await start({booksPath:dir});t.after(close);
+  assert.equal((await request('/api/library')).status,401);
+  assert.equal((await request('/api/library/history/jess301')).status,401);
+  const {cookie}=await request('/api/auth/register',{method:'POST',body:credentials});
+  const catalog=await request('/api/library',{cookie});
+  assert.equal(catalog.body.books.length,1);
+  assert.equal(catalog.body.books[0].sections.length,1);
+  assert.equal(catalog.body.books[0].sections[0].title,'The Rise of Nationalism in Europe');
+  assert.equal(catalog.body.books[0].sections[0].file,undefined);
+  const pdf=await request('/api/library/history/jess301',{cookie});
+  assert.equal(pdf.status,200); assert.match(pdf.text,/^%PDF-/);
+  assert.equal(pdf.headers.get('content-type'),'application/pdf');
+  assert.equal((await request('/api/library/history/jess302',{cookie})).status,404);
+  assert.equal((await request('/api/library/history/server.js',{cookie})).status,404);
+  assert.equal((await request('/api/library/history/jess301/extra',{cookie})).status,404);
+  assert.equal((await request('/api/library/history/jess301',{cookie,headers:{'X-Account-Id':'9999'}})).status,409);
+  const second=await request('/api/auth/register',{method:'POST',body:{...credentials,email:'reader2@example.com'}});
+  assert.equal((await request('/api/library/history/jess301',{cookie:second.cookie})).text,pdf.text);
+});

@@ -104,7 +104,7 @@ test('AI cards append to existing cards and switch away from the active view', a
 
 test('textbook search selects the best matching page and returns original text',async t=>{
   const {run}=await browser(t);
-  run(`textbookDocument={numPages:2,getPage:async n=>({getTextContent:async()=>({items:[{str:n===1?'The French Revolution began in 1789.':'Nationalism in Europe'}]})})};`);
+  run(`textbookKey=':/api/textbook';textbookDocument={numPages:2,getPage:async n=>({getTextContent:async()=>({items:[{str:n===1?'The French Revolution began in 1789.':'Nationalism in Europe'}]})})};`);
   const result=await run(`searchTextbook('French Revolution')`);
   assert.equal(result.page,1);
   assert.equal(result.text,'The French Revolution began in 1789.');
@@ -114,4 +114,36 @@ test('textbook search selects the best matching page and returns original text',
 test('video iframe sends the origin referrer required for embedded playback', async t=>{
   const {document}=await browser(t);
   assert.equal(document.getElementById('video-player-iframe').getAttribute('referrerpolicy'),'strict-origin-when-cross-origin');
+});
+
+test('book cards and section navigation select the correct shared PDF and paper availability', async t => {
+  const {run,window,document}=await browser(t);
+  const books=JSON.parse(readFileSync(new URL('../library.json',import.meta.url),'utf8'));
+  window.fetch=async()=>({ok:true,json:async()=>({books})});
+  await run('loadLibrary()');
+  assert.equal(document.querySelectorAll('.book-card').length,8);
+  run('renderTextbookPage = () => {}; selectSubject("science")');
+  assert.equal(run('activeLibrarySection'),'jesc101');
+  assert.equal(document.getElementById('library-section').options.length,15);
+  assert.equal(document.getElementById('papers-btn').disabled,true);
+  run('stepLibrarySection(1)');
+  assert.equal(run('activeLibrarySection'),'jesc102');
+  assert.match(document.getElementById('pdf-title').textContent,/Acids/);
+  run('selectSubject("history")');
+  assert.equal(document.getElementById('papers-btn').disabled,false);
+  assert.equal(run('activeLibrarySection'),'jess301');
+  run('selectLibrarySection("jess3ps")');
+  assert.equal(document.getElementById('previous-section').disabled,true);
+  run('selectLibrarySection("not-a-section")');
+  assert.equal(run('activeLibrarySection'),'jess3ps');
+  assert.match(run('currentTextbookSource()'),/Front matter/);
+});
+
+test('changing books disposes the PDF loading task and clears stale search results', async t => {
+  const {run}=await browser(t);
+  run(`window.disposed = false; textbookDocument = {loadingTask:{destroy: async()=>{window.disposed=true;}}}; state.currentHighlightData={answer:'old chapter'}; resetTextbook();`);
+  await run('textbookCleanup');
+  assert.equal(run('window.disposed'),true);
+  assert.equal(run('textbookDocument'),null);
+  assert.equal(run('state.currentHighlightData'),null);
 });

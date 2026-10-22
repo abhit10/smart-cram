@@ -158,9 +158,10 @@
                 <button onclick="downloadStudyBackup()">Download backup</button>
                 <label class="file-button">Import backup / shared notes<input type="file" accept=".json,application/json" onchange="importStudyFile(this)"></label>
             </div>
+            <section class="library-home" aria-labelledby="library-heading"><h2 id="library-heading">Your Class 10 library</h2><p>NCERT books · English medium · Read a section at a time</p><div id="book-library" class="book-grid" aria-live="polite">Loading books…</div></section>
             <div class="info-banner">
                 <div class="info-icon">✓</div>
-                <p>Select History from the navbar to get started</p>
+                <p>Choose a book below, then open a chapter or reference section.</p>
             </div>
         </div>
 
@@ -174,6 +175,12 @@
                 <h2 id="study-title">Study View</h2>
             </div>
 
+            <div class="library-navigation" id="library-navigation" hidden>
+                <label for="library-section">Chapter or section</label>
+                <select id="library-section" onchange="selectLibrarySection(this.value)"></select>
+                <div class="section-navigation"><button id="previous-section" onclick="stepLibrarySection(-1)">Previous section</button><span id="section-summary"></span><button id="next-section" onclick="stepLibrarySection(1)">Next section</button></div>
+                <p id="library-reading-info">Page numbers refer to this PDF section. Search finds text within the open section.</p>
+            </div>
             <div class="study-panels">
                 <!-- Questions Panel -->
                 <div id="questions-panel" class="questions-panel hidden">
@@ -191,11 +198,12 @@
                         <h3 id="pdf-title">Textbook</h3>
                     </div>
                     <div class="study-toolbar">
-                        <label class="file-button">Upload textbook PDF<input id="textbook-upload" type="file" accept="application/pdf,.pdf" onchange="uploadTextbook(this)"></label>
+                        <button id="shared-textbook" onclick="useSharedTextbook()" hidden>Return to shared book</button>
+                        <label class="file-button">Upload personal PDF<input id="textbook-upload" type="file" accept="application/pdf,.pdf" onchange="uploadTextbook(this)"></label>
                         <button onclick="renderTextbookPage(textbookPage - 1)">Previous page</button>
                         <label>Page <input id="textbook-page" type="number" min="1" value="1" onchange="renderTextbookPage(this.value)"></label><span id="textbook-count"></span>
                         <button onclick="renderTextbookPage(textbookPage + 1)">Next page</button>
-                        <label>Search textbook <input id="textbook-search" type="search" onkeydown="if(event.key === 'Enter') findInTextbook()"></label><button id="textbook-find" onclick="findInTextbook()">Find</button>
+                        <label>Search this section <input id="textbook-search" type="search" onkeydown="if(event.key === 'Enter') findInTextbook()"></label><button id="textbook-find" onclick="findInTextbook()">Find</button>
                     </div>
                     <div class="pdf-content">
                         <div id="pdf-viewer" class="pdf-viewer">
