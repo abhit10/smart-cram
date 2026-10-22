@@ -293,3 +293,19 @@ test('persistent Gemini overload stops after two attempts with an actionable err
   const response=await request('/api/chat',{method:'POST',cookie,body:{message:'Hello'}});
   assert.equal(response.status,503);assert.match(response.body.error,/temporarily busy/);assert.equal(calls,2);
 });
+
+test('public landing page links to registration and sign-in while study APIs remain protected', async t => {
+  const {request,close}=await start(); t.after(close);
+  const landing=await request('/');
+  assert.equal(landing.status,200);
+  assert.match(landing.text,/Less cramming/);
+  assert.match(landing.text,/href="\/app\?mode=register"/);
+  assert.match(landing.text,/href="\/app\?mode=login"/);
+  assert.match(landing.text,/id="how-it-works"/);
+  assert.doesNotMatch(landing.text,/id="auth-panel"/);
+  for (const path of ['/app','/app?mode=register','/app?mode=login','/index.html']) {
+    const page=await request(path); assert.equal(page.status,200); assert.match(page.text,/id="auth-panel"/);
+  }
+  assert.equal((await request('/landing.css')).status,200);
+  assert.equal((await request('/api/data')).status,401);
+});

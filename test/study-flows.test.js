@@ -147,3 +147,15 @@ test('changing books disposes the PDF loading task and clears stale search resul
   assert.equal(run('textbookDocument'),null);
   assert.equal(run('state.currentHighlightData'),null);
 });
+
+test('landing registration link opens the correct form without changing default sign-in', async t => {
+  const {run,window,document}=await browser(t);
+  window.fetch=async()=>({ok:false,status:401,json:async()=>({error:'Please sign in'})});
+  await run('initializeAccount()');
+  assert.equal(document.getElementById('auth-submit').textContent,'Sign in');
+  window.history.replaceState(null,'','/app?mode=register');
+  await run('initializeAccount()');
+  assert.equal(document.getElementById('auth-submit').textContent,'Create account');
+  assert.equal(document.getElementById('auth-name').required,true);
+  assert.equal(document.getElementById('auth-panel').hidden,false);
+});

@@ -98,6 +98,7 @@ async function finishSignIn(user) {
 }
 
 async function initializeAccount() {
+  if (new URLSearchParams(window.location.search).get('mode') === 'register' && !registering) toggleAuthMode();
   showAuth();
   try {
     const { user } = await apiRequest('/api/auth/me');
@@ -109,6 +110,7 @@ async function initializeAccount() {
 
 function toggleAuthMode() {
   registering = !registering;
+  document.getElementById('auth-description').textContent = registering ? 'Create an account to save your notes, flashcards and study progress.' : 'Sign in to keep your study notes and flashcards across sessions.';
   document.getElementById('auth-title').textContent = registering ? 'Create your account' : 'Welcome to Smart Cram';
   document.getElementById('auth-name-label').hidden = !registering;
   document.getElementById('auth-name').required = registering;

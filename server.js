@@ -162,7 +162,8 @@ export function createApp({ databasePath = process.env.DATABASE_PATH || resolve(
     return reply;
   }
   const staticFiles = new Map([
-    ['/', ['index.html', 'text/html']], ['/index.html', ['index.html', 'text/html']],
+    ['/', ['landing.html', 'text/html']], ['/app', ['index.html', 'text/html']],
+    ['/landing.css', ['landing.css', 'text/css']], ['/index.html', ['index.html', 'text/html']],
     ['/script.js', ['script.js', 'text/javascript']], ['/account.js', ['account.js', 'text/javascript']],
     ['/styles.css', ['styles.css', 'text/css']],
     ['/study-tools.js', ['study-tools.js', 'text/javascript']],

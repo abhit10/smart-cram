@@ -18,9 +18,13 @@ A study app for question papers, cheatsheets, AI explanations, flashcards, and e
    npm start
    ```
 
-5. Open **http://localhost:3000**, choose **Create an account**, and register with a name, email, and password of at least eight characters.
+5. Open **http://localhost:3000** to see the public landing page, choose **Get started**, and register with a name, email, and password of at least eight characters.
 
 Use the server URL, rather than opening `index.html` directly or using Live Server. If changing the port or hostname, update `PORT` and `APP_ORIGIN` together and open that exact origin. `HOST` defaults to the local machine only.
+
+## Public landing page
+
+`/` introduces the platform without requiring an account. Get started opens `/app?mode=register`, Sign in opens `/app?mode=login`, and existing sessions go straight to the dashboard. `/app` and the legacy `/index.html` serve the study application. The landing page uses local CSS, semantic links, visible focus states and reduced-motion support; it has no external font, image or JavaScript dependencies.
 
 ## Shared textbook library
 

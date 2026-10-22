@@ -10,8 +10,9 @@
 <body>
     <section id="auth-panel" class="auth-panel" aria-labelledby="auth-title">
         <form class="auth-card" onsubmit="submitAuth(event)">
+            <a href="/" class="auth-toggle">← Back to Smart Cram</a>
             <h1 id="auth-title">Welcome to Smart Cram</h1>
-            <p>Sign in to keep your study notes and flashcards across sessions.</p>
+            <p id="auth-description">Sign in to keep your study notes and flashcards across sessions.</p>
             <label id="auth-name-label" hidden>Name<input id="auth-name" autocomplete="name" maxlength="80"></label>
             <label>Email<input id="auth-email" type="email" autocomplete="username" maxlength="254" required></label>
             <label>Password<input id="auth-password" type="password" autocomplete="current-password" minlength="8" maxlength="128" required></label>
